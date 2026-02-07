@@ -136,9 +136,7 @@
   }
 
   var standA = simpleStandings(0, groupA);
-  var standB = simpleStandings(0, groupB);
-  // Fix: use group index 1 for B
-  standB = simpleStandings(1, groupB);
+  var standB = simpleStandings(1, groupB);
 
   var a1 = standA[0].id, a2 = standA[1].id;
   var b1 = standB[0].id, b2 = standB[1].id;
