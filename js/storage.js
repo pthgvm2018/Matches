@@ -27,6 +27,10 @@ function loadData() {
   if (stored) {
     try { return JSON.parse(stored); } catch (e) { console.error(e); }
   }
+  // 若無儲存資料且有 DEMO_DATA，載入展示用測試資料
+  if (typeof DEMO_DATA !== 'undefined') {
+    return JSON.parse(JSON.stringify(DEMO_DATA));
+  }
   return getDefaultData();
 }
 
