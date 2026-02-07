@@ -540,6 +540,12 @@
       if (!confirm('確定重置？')) return; if (!confirm('真的確定？')) return;
       data = getDefaultData(); persist(); renderAll(); showToast('已重置');
     });
+    document.getElementById('btnLoadDemo').addEventListener('click', () => {
+      if (typeof DEMO_DATA === 'undefined') { showToast('測試資料未載入'); return; }
+      if (data.teams.length > 0 && !confirm('將覆蓋目前的資料，確定載入測試資料？')) return;
+      data = JSON.parse(JSON.stringify(DEMO_DATA));
+      persist(); renderAll(); showToast('已載入 10 隊測試資料');
+    });
   }
   function updateShareLinks() {
     document.getElementById('viewUrl').value = generateViewURL(data);
