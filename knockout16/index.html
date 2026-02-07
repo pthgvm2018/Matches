@@ -7,19 +7,37 @@
   <link rel="stylesheet" href="../css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
   <style>
-    .ko-bracket { display:flex; gap:0; overflow-x:auto; padding:16px 0; align-items:center; }
-    .ko-round { display:flex; flex-direction:column; min-width:160px; }
-    .ko-round-title { text-align:center; font-size:0.8rem; font-weight:700; color:var(--accent); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px; }
-    .ko-match { background:var(--surface); border:1px solid var(--border); border-radius:6px; margin:4px 6px; font-size:0.78rem; overflow:hidden; }
-    .ko-team-row { display:flex; justify-content:space-between; padding:5px 8px; border-bottom:1px solid var(--border); }
-    .ko-team-row:last-child { border-bottom:none; }
-    .ko-team-row.winner { background:rgba(0,200,150,0.1); }
-    .ko-team-row.winner .ko-tname { color:var(--accent); font-weight:700; }
-    .ko-tname { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .ko-tscore { font-weight:700; min-width:18px; text-align:center; }
-    .ko-connector { display:flex; flex-direction:column; justify-content:center; min-width:20px; }
-    .ko-line { border-top:2px solid var(--border); width:20px; }
+    /* ===== 樹狀對戰表 (Flexbox Bracket) ===== */
+    .bracket-wrap { overflow-x:auto; padding:10px 0; }
+    .bracket { display:flex; flex-direction:row; }
+    .bracket .round { display:flex; flex-direction:column; justify-content:center; width:170px; list-style:none; padding:0; margin:0; }
+    .bracket .round .spacer { flex-grow:1; }
+    .bracket .round .spacer:first-child,
+    .bracket .round .spacer:last-child { flex-grow:.5; }
+    .bracket .round .game-spacer { flex-grow:1; min-height:24px; border-right:2px solid var(--border); }
 
+    .bracket .round li.game { padding:6px 10px; font-size:0.82rem; display:flex; justify-content:space-between; align-items:center; white-space:nowrap; background:var(--surface); }
+    .bracket .round li.game-top { border-bottom:2px solid var(--border); border-top:1px solid var(--border); border-left:1px solid var(--border); border-radius:4px 0 0 0; }
+    .bracket .round li.game-bottom { border-top:2px solid var(--border); border-bottom:1px solid var(--border); border-left:1px solid var(--border); border-radius:0 0 0 4px; }
+    .bracket .round li.game .tname { flex:1; overflow:hidden; text-overflow:ellipsis; color:var(--text-secondary); }
+    .bracket .round li.game .tscore { font-weight:800; min-width:20px; text-align:center; margin-left:8px; color:var(--text-secondary); }
+    .bracket .round li.game.winner .tname { color:var(--accent); font-weight:700; }
+    .bracket .round li.game.winner .tscore { color:var(--accent); }
+
+    /* 輪次標題列 */
+    .bracket .round-header { display:flex; flex-direction:column; justify-content:flex-start; width:170px; list-style:none; padding:0; margin:0; }
+    .round-label { text-align:center; font-size:0.75rem; font-weight:700; color:var(--accent); letter-spacing:1px; padding-bottom:8px; }
+
+    /* 季軍戰獨立區塊 */
+    .third-place-section { margin-top:16px; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; display:inline-flex; flex-direction:column; font-size:0.82rem; }
+    .third-place-section .tp-title { font-size:0.75rem; font-weight:700; color:var(--accent); margin-bottom:6px; text-align:center; }
+    .third-place-section .tp-row { display:flex; justify-content:space-between; padding:4px 10px; }
+    .third-place-section .tp-row.winner .tname { color:var(--accent); font-weight:700; }
+    .third-place-section .tp-row.winner .tscore { color:var(--accent); font-weight:800; }
+    .third-place-section .tname { min-width:60px; }
+    .third-place-section .tscore { font-weight:700; min-width:20px; text-align:center; margin-left:12px; }
+
+    /* ===== 比賽詳情 ===== */
     .detail-card { margin-top:20px; }
     .match-row { background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:8px; overflow:hidden; }
     .match-row-header { display:flex; align-items:center; justify-content:center; gap:12px; padding:12px 16px; cursor:pointer; transition:background 0.15s; }
@@ -89,8 +107,8 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="js/demo-data.js?v=1"></script>
-  <script src="js/storage.js?v=1"></script>
-  <script src="js/view.js?v=1"></script>
+  <script src="js/demo-data.js?v=2"></script>
+  <script src="js/storage.js?v=2"></script>
+  <script src="js/view.js?v=2"></script>
 </body>
 </html>

@@ -54,7 +54,7 @@
     el.innerHTML = html;
   }
 
-  // ===== 樹狀對戰圖 =====
+  // ===== 樹狀對戰圖 (Flexbox Bracket with connector lines) =====
   function renderBracket() {
     var container = document.getElementById('bracketContainer');
     if (!data.rounds || data.rounds.length === 0) {
@@ -62,41 +62,67 @@
       return;
     }
 
-    var html = '<div class="ko-bracket">';
+    var html = '<div class="bracket-wrap"><div class="bracket">';
+
     data.rounds.forEach(function (round, ri) {
-      if (ri > 0) html += '<div class="ko-connector"><div class="ko-line"></div></div>';
-      html += '<div class="ko-round">';
-      html += '<div class="ko-round-title">' + esc(round.name) + '</div>';
-      round.matches.forEach(function (m) {
-        html += renderBracketMatch(m);
+      var matches = round.matches;
+
+      // 每個 round 是一個 <ul class="round">
+      html += '<ul class="round">';
+
+      matches.forEach(function (m, mi) {
+        var t1 = getTeamName(data.teams, m.team1Id);
+        var t2 = getTeamName(data.teams, m.team2Id);
+        var w1 = m.completed && m.score1 > m.score2;
+        var w2 = m.completed && m.score2 > m.score1;
+        var s1 = m.completed ? m.score1 : (m.team1Id ? '-' : '');
+        var s2 = m.completed ? m.score2 : (m.team2Id ? '-' : '');
+
+        // spacer before first match
+        html += '<li class="spacer">&nbsp;</li>';
+
+        // game-top (team 1)
+        html += '<li class="game game-top' + (w1 ? ' winner' : '') + '">';
+        html += '<span class="tname">' + esc(t1) + '</span>';
+        html += '<span class="tscore">' + s1 + '</span>';
+        html += '</li>';
+
+        // game-spacer (connector line via border-right)
+        html += '<li class="game-spacer">&nbsp;</li>';
+
+        // game-bottom (team 2)
+        html += '<li class="game game-bottom' + (w2 ? ' winner' : '') + '">';
+        html += '<span class="tname">' + esc(t2) + '</span>';
+        html += '<span class="tscore">' + s2 + '</span>';
+        html += '</li>';
       });
-      html += '</div>';
+
+      // final spacer
+      html += '<li class="spacer">&nbsp;</li>';
+      html += '</ul>';
     });
 
-    // 季軍戰
+    html += '</div>';
+
+    // 季軍戰放在對戰表下方
     if (data.thirdPlace) {
-      html += '<div class="ko-connector"><div class="ko-line"></div></div>';
-      html += '<div class="ko-round">';
-      html += '<div class="ko-round-title">季軍戰</div>';
-      html += renderBracketMatch(data.thirdPlace);
+      var tp = data.thirdPlace;
+      var t1 = getTeamName(data.teams, tp.team1Id);
+      var t2 = getTeamName(data.teams, tp.team2Id);
+      var w1 = tp.completed && tp.score1 > tp.score2;
+      var w2 = tp.completed && tp.score2 > tp.score1;
+      var s1 = tp.completed ? tp.score1 : '-';
+      var s2 = tp.completed ? tp.score2 : '-';
+
+      html += '<div class="third-place-section">';
+      html += '<div class="tp-title">季軍戰</div>';
+      html += '<div class="tp-row' + (w1 ? ' winner' : '') + '"><span class="tname">' + esc(t1) + '</span><span class="tscore">' + s1 + '</span></div>';
+      html += '<div class="tp-row' + (w2 ? ' winner' : '') + '"><span class="tname">' + esc(t2) + '</span><span class="tscore">' + s2 + '</span></div>';
       html += '</div>';
     }
 
     html += '</div>';
     container.innerHTML = html;
-  }
-
-  function renderBracketMatch(m) {
-    var t1 = getTeamName(data.teams, m.team1Id);
-    var t2 = getTeamName(data.teams, m.team2Id);
-    var w1 = m.completed && m.score1 > m.score2;
-    var w2 = m.completed && m.score2 > m.score1;
-
-    var html = '<div class="ko-match">';
-    html += '<div class="ko-team-row' + (w1 ? ' winner' : '') + '"><span class="ko-tname">' + esc(t1) + '</span><span class="ko-tscore">' + (m.completed ? m.score1 : '-') + '</span></div>';
-    html += '<div class="ko-team-row' + (w2 ? ' winner' : '') + '"><span class="ko-tname">' + esc(t2) + '</span><span class="ko-tscore">' + (m.completed ? m.score2 : '-') + '</span></div>';
-    html += '</div>';
-    return html;
   }
 
   // ===== 比賽詳情（可展開各局比分） =====
