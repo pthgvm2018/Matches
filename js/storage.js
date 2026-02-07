@@ -25,9 +25,15 @@ function saveData(data) {
 function loadData() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
-    try { return JSON.parse(stored); } catch (e) { console.error(e); }
+    try {
+      const parsed = JSON.parse(stored);
+      // 若已有實際資料（有隊伍），使用儲存的資料
+      if (parsed.teams && parsed.teams.length > 0) {
+        return parsed;
+      }
+    } catch (e) { console.error(e); }
   }
-  // 若無儲存資料且有 DEMO_DATA，載入展示用測試資料
+  // 若無實際資料且有 DEMO_DATA，載入展示用測試資料
   if (typeof DEMO_DATA !== 'undefined') {
     return JSON.parse(JSON.stringify(DEMO_DATA));
   }
