@@ -733,15 +733,145 @@ select.form-control { cursor: pointer; }
   animation: fadeIn 0.3s ease;
 }
 
-/* ===== Third Place Match ===== */
-.third-place-section {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--border);
+/* ===== Doubles Detail (View) ===== */
+.team-match-wrapper { margin-bottom: 4px; }
+
+.team-match-header { cursor: pointer; user-select: none; position: relative; }
+.team-match-header:hover { border-color: var(--accent); }
+
+.toggle-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
 }
 
-.third-place-label {
-  font-size: 0.85rem;
+.doubles-detail {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  padding: 12px;
+}
+
+.doubles-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.doubles-item:last-child { border-bottom: none; }
+
+.doubles-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.doubles-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.doubles-player {
+  flex: 1;
+  font-weight: 500;
+}
+.doubles-player:first-child { text-align: right; }
+.doubles-player:last-child { text-align: left; }
+
+.doubles-score {
+  font-weight: 700;
+  font-size: 1rem;
+  min-width: 50px;
+  text-align: center;
+}
+
+.doubles-games {
+  text-align: center;
+  font-size: 0.78rem;
   color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ===== Table Responsive ===== */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ===== Player List (Admin) ===== */
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.player-input {
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+.player-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.player-input::placeholder { color: var(--text-muted); }
+
+/* ===== Doubles Edit (Admin) ===== */
+.doubles-edit-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
   margin-bottom: 8px;
+}
+
+.doubles-edit-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.doubles-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.doubles-edit-row select {
+  flex: 1;
+  min-width: 80px;
+  padding: 5px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-family: inherit;
+}
+.doubles-edit-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .doubles-row { flex-wrap: wrap; }
+  .doubles-player { flex: none; width: 40%; font-size: 0.82rem; }
+  .doubles-score { width: 20%; }
+  .player-grid { grid-template-columns: repeat(2, 1fr); }
 }

@@ -1,59 +1,35 @@
-// ===== Admin Page Logic =====
+// ===== Admin Page Logic (團體賽版) =====
 (function () {
   let data = null;
 
   function init() {
     data = getDataFromURL();
-    if (data) {
-      saveData(data);
-      // Clean URL hash after loading
-      history.replaceState(null, '', window.location.pathname);
-    } else {
-      data = loadData();
-    }
-    setupNav();
-    setupSettings();
-    setupTeams();
-    setupGroups();
-    setupKnockout();
-    setupShare();
+    if (data) { saveData(data); history.replaceState(null, '', window.location.pathname); }
+    else data = loadData();
+    setupNav(); setupSettings(); setupTeams(); setupGroups(); setupKnockout(); setupShare();
     renderAll();
   }
 
-  // ===== Navigation =====
   function setupNav() {
     document.querySelectorAll('.nav-link').forEach(btn => {
       btn.addEventListener('click', function () {
         document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         this.classList.add('active');
-        const sec = document.getElementById('sec-' + this.dataset.section);
-        if (sec) sec.classList.add('active');
-        // Refresh the target section
-        const section = this.dataset.section;
-        if (section === 'groupmatches') renderGroupMatches();
-        if (section === 'knockout') renderKnockoutRounds();
-        if (section === 'share') updateShareLinks();
+        document.getElementById('sec-' + this.dataset.section)?.classList.add('active');
+        const sec = this.dataset.section;
+        if (sec === 'groupmatches') renderGroupMatches();
+        if (sec === 'knockout') renderKnockoutRounds();
+        if (sec === 'share') updateShareLinks();
       });
     });
   }
 
-  function renderAll() {
-    renderSettingsForm();
-    renderTeamList();
-    renderGroupConfig();
-    renderGroupMatches();
-    renderKnockoutRounds();
-  }
-
-  function persist() {
-    saveData(data);
-  }
-
+  function renderAll() { renderSettingsForm(); renderTeamList(); renderGroupConfig(); renderGroupMatches(); renderKnockoutRounds(); }
+  function persist() { saveData(data); }
   function showToast(msg) {
     const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
+    el.textContent = msg; el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 2000);
   }
 
@@ -71,7 +47,6 @@
       showToast('設定已儲存');
     });
   }
-
   function renderSettingsForm() {
     const t = data.tournament;
     document.getElementById('inputName').value = t.name || '';
@@ -80,73 +55,69 @@
     document.getElementById('inputRules').value = t.rules || '';
     document.getElementById('inputGroupFormat').value = t.groupFormat || '五局三勝';
     document.getElementById('inputKnockoutFormat').value = t.knockoutFormat || '七局四勝';
-    if (t.name) {
-      document.getElementById('adminTitle').textContent = t.name + ' - 管理後台';
-    }
+    if (t.name) document.getElementById('adminTitle').textContent = t.name + ' - 管理後台';
   }
 
-  // ===== Teams =====
+  // ===== Teams (含球員管理) =====
   function setupTeams() {
-    const input = document.getElementById('inputTeamName');
-    document.getElementById('btnAddTeam').addEventListener('click', () => addTeam());
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTeam(); });
+    document.getElementById('btnAddTeam').addEventListener('click', addTeam);
+    document.getElementById('inputTeamName').addEventListener('keydown', e => { if (e.key === 'Enter') addTeam(); });
   }
-
   function addTeam() {
     const input = document.getElementById('inputTeamName');
     const name = input.value.trim();
     if (!name) return;
-    if (data.teams.length >= 10) {
-      showToast('最多只能新增 10 支隊伍');
-      return;
-    }
-    if (data.teams.some(t => t.name === name)) {
-      showToast('隊伍名稱已存在');
-      return;
-    }
-    data.teams.push({ id: nextTeamId(data.teams), name });
-    persist();
-    input.value = '';
-    input.focus();
-    renderTeamList();
+    if (data.teams.length >= 10) { showToast('最多 10 支隊伍'); return; }
+    if (data.teams.some(t => t.name === name)) { showToast('名稱已存在'); return; }
+    data.teams.push({ id: nextTeamId(data.teams), name, players: ['','','','','','','','','',''] });
+    persist(); input.value = ''; renderTeamList();
     showToast('已新增隊伍：' + name);
   }
-
   function removeTeam(id) {
-    if (!confirm('確定要刪除此隊伍？相關的比賽記錄也會受影響。')) return;
+    if (!confirm('確定刪除此隊伍？')) return;
     data.teams = data.teams.filter(t => t.id !== id);
-    // Remove from groups
-    data.groups.forEach(g => {
-      g.teamIds = g.teamIds.filter(tid => tid !== id);
-    });
-    // Remove related matches
+    data.groups.forEach(g => { g.teamIds = g.teamIds.filter(tid => tid !== id); });
     data.groupMatches = data.groupMatches.filter(m => m.team1Id !== id && m.team2Id !== id);
-    persist();
-    renderTeamList();
-    renderGroupConfig();
-    showToast('隊伍已刪除');
+    persist(); renderTeamList(); renderGroupConfig(); showToast('隊伍已刪除');
   }
-
   function renderTeamList() {
     const container = document.getElementById('teamList');
     document.getElementById('teamCount').textContent = data.teams.length + ' / 10';
-
-    if (data.teams.length === 0) {
-      container.innerHTML = '<div class="empty-state"><p>尚未新增任何隊伍</p></div>';
-      return;
-    }
+    if (data.teams.length === 0) { container.innerHTML = '<div class="empty-state"><p>尚未新增任何隊伍</p></div>'; return; }
 
     let html = '';
-    data.teams.forEach((team, i) => {
-      html += '<div class="team-item">';
-      html += '<div class="team-info"><span class="team-number">' + (i + 1) + '</span><span>' + escHtml(team.name) + '</span></div>';
-      html += '<button class="btn btn-danger btn-sm" data-remove-team="' + team.id + '">刪除</button>';
+    data.teams.forEach((team, ti) => {
+      html += '<div class="card" style="padding:14px;">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+      html += '<div class="team-info"><span class="team-number">' + (ti + 1) + '</span><strong>' + esc(team.name) + '</strong></div>';
+      html += '<button class="btn btn-danger btn-sm" data-remove-team="' + team.id + '">刪除隊伍</button>';
+      html += '</div>';
+      html += '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">選手名單（10 人，每 2 人為一組雙打）：</div>';
+      html += '<div class="player-grid">';
+      for (let p = 0; p < 10; p++) {
+        const label = '第' + (Math.floor(p / 2) + 1) + '點 ' + (p % 2 === 0 ? 'A' : 'B');
+        html += '<input type="text" class="player-input" placeholder="' + label + '" value="' + esc(team.players[p] || '') + '" data-team="' + team.id + '" data-player="' + p + '">';
+      }
+      html += '</div>';
+      html += '<button class="btn btn-primary btn-sm" style="margin-top:8px;" data-save-players="' + team.id + '">儲存選手</button>';
       html += '</div>';
     });
     container.innerHTML = html;
 
     container.querySelectorAll('[data-remove-team]').forEach(btn => {
       btn.addEventListener('click', () => removeTeam(parseInt(btn.dataset.removeTeam)));
+    });
+    container.querySelectorAll('[data-save-players]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tid = parseInt(btn.dataset.savePlayers);
+        const team = data.teams.find(t => t.id === tid);
+        if (!team) return;
+        for (let p = 0; p < 10; p++) {
+          const inp = container.querySelector('[data-team="' + tid + '"][data-player="' + p + '"]');
+          if (inp) team.players[p] = inp.value.trim();
+        }
+        persist(); showToast(team.name + ' 選手已儲存');
+      });
     });
   }
 
@@ -155,624 +126,435 @@
     document.getElementById('btnAutoGroup').addEventListener('click', autoGroup);
     document.getElementById('btnSaveGroups').addEventListener('click', saveGroupsAndGenerateMatches);
   }
-
   function autoGroup() {
-    const groupCount = parseInt(document.getElementById('inputGroupCount').value);
-    const advanceCount = parseInt(document.getElementById('inputAdvanceCount').value);
-    if (data.teams.length < 2) {
-      showToast('請先新增至少 2 支隊伍');
-      return;
-    }
-
-    // Shuffle teams
+    const gc = parseInt(document.getElementById('inputGroupCount').value);
+    const ac = parseInt(document.getElementById('inputAdvanceCount').value);
+    if (data.teams.length < 2) { showToast('至少 2 支隊伍'); return; }
     const shuffled = [...data.teams].sort(() => Math.random() - 0.5);
+    const names = ['A','B','C','D','E','F'];
     const groups = [];
-    const groupNames = ['A', 'B', 'C', 'D', 'E', 'F'];
-
-    for (let i = 0; i < groupCount; i++) {
-      groups.push({ name: groupNames[i] + ' 組', teamIds: [], advanceCount });
-    }
-
-    // Distribute teams evenly
-    shuffled.forEach((team, i) => {
-      groups[i % groupCount].teamIds.push(team.id);
-    });
-
-    data.groups = groups;
-    persist();
-    renderGroupConfig();
-    showToast('已自動分組');
+    for (let i = 0; i < gc; i++) groups.push({ name: names[i] + ' 組', teamIds: [], advanceCount: ac });
+    shuffled.forEach((t, i) => groups[i % gc].teamIds.push(t.id));
+    data.groups = groups; persist(); renderGroupConfig(); showToast('已自動分組');
   }
-
   function renderGroupConfig() {
     const container = document.getElementById('groupConfig');
-    if (data.groups.length === 0) {
-      container.innerHTML = '';
-      return;
-    }
-
+    if (!data.groups.length) { container.innerHTML = ''; return; }
     let html = '';
-    data.groups.forEach((group, gi) => {
-      html += '<div class="group-card">';
-      html += '<div class="group-card-title">' + escHtml(group.name) + ' <span class="badge badge-accent">' + group.teamIds.length + ' 隊</span></div>';
-
-      // Team list in this group
-      group.teamIds.forEach(tid => {
-        const team = getTeamById(data.teams, tid);
-        if (!team) return;
-        html += '<div class="group-team-item"><span>' + escHtml(team.name) + '</span>';
-        html += '<button class="btn btn-danger btn-sm" data-remove-from-group="' + gi + '_' + tid + '">移除</button></div>';
+    data.groups.forEach((g, gi) => {
+      html += '<div class="group-card"><div class="group-card-title">' + esc(g.name) + ' <span class="badge badge-accent">' + g.teamIds.length + ' 隊</span></div>';
+      g.teamIds.forEach(tid => {
+        const t = getTeamById(data.teams, tid);
+        if (!t) return;
+        html += '<div class="group-team-item"><span>' + esc(t.name) + '</span><button class="btn btn-danger btn-sm" data-rfg="' + gi + '_' + tid + '">移除</button></div>';
       });
-
-      // Add team to group dropdown
-      const availableTeams = data.teams.filter(t => !group.teamIds.includes(t.id));
-      if (availableTeams.length > 0) {
-        html += '<div style="margin-top:8px;display:flex;gap:6px;">';
-        html += '<select class="form-control" id="addToGroup' + gi + '" style="flex:1;">';
-        html += '<option value="">選擇隊伍...</option>';
-        availableTeams.forEach(t => {
-          html += '<option value="' + t.id + '">' + escHtml(t.name) + '</option>';
-        });
-        html += '</select>';
-        html += '<button class="btn btn-primary btn-sm" data-add-to-group="' + gi + '">加入</button>';
-        html += '</div>';
+      const avail = data.teams.filter(t => !g.teamIds.includes(t.id));
+      if (avail.length) {
+        html += '<div style="margin-top:8px;display:flex;gap:6px;"><select class="form-control" id="atg' + gi + '" style="flex:1;"><option value="">選擇隊伍...</option>';
+        avail.forEach(t => { html += '<option value="' + t.id + '">' + esc(t.name) + '</option>'; });
+        html += '</select><button class="btn btn-primary btn-sm" data-atg="' + gi + '">加入</button></div>';
       }
-
       html += '</div>';
     });
     container.innerHTML = html;
-
-    // Event listeners for remove from group
-    container.querySelectorAll('[data-remove-from-group]').forEach(btn => {
+    container.querySelectorAll('[data-rfg]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const [gi, tid] = btn.dataset.removeFromGroup.split('_').map(Number);
+        const [gi, tid] = btn.dataset.rfg.split('_').map(Number);
         data.groups[gi].teamIds = data.groups[gi].teamIds.filter(id => id !== tid);
-        persist();
-        renderGroupConfig();
+        persist(); renderGroupConfig();
       });
     });
-
-    // Event listeners for add to group
-    container.querySelectorAll('[data-add-to-group]').forEach(btn => {
+    container.querySelectorAll('[data-atg]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const gi = parseInt(btn.dataset.addToGroup);
-        const select = document.getElementById('addToGroup' + gi);
-        const tid = parseInt(select.value);
+        const gi = parseInt(btn.dataset.atg);
+        const tid = parseInt(document.getElementById('atg' + gi).value);
         if (!tid) return;
-        // Remove from other groups first
-        data.groups.forEach(g => {
-          g.teamIds = g.teamIds.filter(id => id !== tid);
-        });
+        data.groups.forEach(g => { g.teamIds = g.teamIds.filter(id => id !== tid); });
         data.groups[gi].teamIds.push(tid);
-        persist();
-        renderGroupConfig();
+        persist(); renderGroupConfig();
       });
     });
   }
-
   function saveGroupsAndGenerateMatches() {
-    const advanceCount = parseInt(document.getElementById('inputAdvanceCount').value);
-    data.groups.forEach(g => g.advanceCount = advanceCount);
-
-    // Check if groups have teams
-    const hasTeams = data.groups.some(g => g.teamIds.length >= 2);
-    if (!hasTeams) {
-      showToast('每組至少需要 2 支隊伍');
-      return;
-    }
-
-    // Generate round-robin matches for each group
-    // Preserve existing completed matches
-    const existingCompleted = {};
-    data.groupMatches.filter(m => m.completed).forEach(m => {
-      existingCompleted[m.id] = m;
+    const ac = parseInt(document.getElementById('inputAdvanceCount').value);
+    data.groups.forEach(g => g.advanceCount = ac);
+    if (!data.groups.some(g => g.teamIds.length >= 2)) { showToast('每組至少 2 隊'); return; }
+    const existing = {};
+    data.groupMatches.filter(m => m.completed).forEach(m => { existing[m.id] = m; });
+    const newM = [];
+    data.groups.forEach((g, gi) => {
+      generateRoundRobinMatches(gi, g.teamIds).forEach(m => { newM.push(existing[m.id] || m); });
     });
-
-    const newMatches = [];
-    data.groups.forEach((group, gi) => {
-      const matches = generateRoundRobinMatches(gi, group.teamIds);
-      matches.forEach(m => {
-        if (existingCompleted[m.id]) {
-          newMatches.push(existingCompleted[m.id]);
-        } else {
-          newMatches.push(m);
-        }
-      });
-    });
-
-    data.groupMatches = newMatches;
-    persist();
-    renderGroupMatches();
-    showToast('分組已儲存，賽程已產生');
+    data.groupMatches = newM; persist(); renderGroupMatches(); showToast('賽程已產生');
   }
 
-  // ===== Group Matches =====
+  // ===== Group Matches (含5點雙打編輯) =====
   function renderGroupMatches() {
     const container = document.getElementById('groupMatchesContainer');
-    if (data.groupMatches.length === 0) {
-      container.innerHTML = '<div class="empty-state"><p>尚無小組賽程，請先完成分組設定</p></div>';
-      return;
-    }
-
+    if (!data.groupMatches.length) { container.innerHTML = '<div class="empty-state"><p>請先完成分組設定</p></div>'; return; }
     let html = '';
     data.groups.forEach((group, gi) => {
       const matches = data.groupMatches.filter(m => m.groupIndex === gi);
-      if (matches.length === 0) return;
-
-      html += '<div class="card">';
-      html += '<div class="card-title">' + escHtml(group.name) + '</div>';
-
-      matches.forEach(m => {
-        const t1 = getTeamName(data.teams, m.team1Id);
-        const t2 = getTeamName(data.teams, m.team2Id);
-        const statusClass = m.completed ? 'badge-green' : 'badge-yellow';
-        const statusText = m.completed ? '已完成' : '未開始';
-
-        html += '<div class="match-edit-item" id="match-' + m.id + '">';
-        html += '<div class="match-edit-header">';
-        html += '<div class="match-edit-teams"><span>' + escHtml(t1) + '</span><span class="vs">vs</span><span>' + escHtml(t2) + '</span></div>';
-        html += '<span class="badge ' + statusClass + '">' + statusText + '</span>';
-        html += '</div>';
-
-        // Score inputs
-        html += '<div class="score-input-row">';
-        html += '<span style="color:var(--text-secondary);font-size:0.85rem;min-width:60px;">' + escHtml(t1) + '</span>';
-        html += '<input type="number" class="score-input" min="0" max="4" value="' + m.score1 + '" data-match="' + m.id + '" data-field="score1">';
-        html += '<span style="color:var(--text-muted);">:</span>';
-        html += '<input type="number" class="score-input" min="0" max="4" value="' + m.score2 + '" data-match="' + m.id + '" data-field="score2">';
-        html += '<span style="color:var(--text-secondary);font-size:0.85rem;">' + escHtml(t2) + '</span>';
-        html += '</div>';
-
-        // Game-by-game scores
-        html += '<div style="margin-top:8px;">';
-        html += '<label style="font-size:0.8rem;color:var(--text-muted);">各局比分（選填）：</label>';
-        html += '<div class="game-scores" data-games-for="' + m.id + '">';
-        const totalGames = (m.score1 || 0) + (m.score2 || 0);
-        for (let g = 0; g < Math.max(totalGames, m.games ? m.games.length : 0); g++) {
-          const gs = (m.games && m.games[g]) || { s1: '', s2: '' };
-          html += '<div class="game-score-pair">';
-          html += '<input type="number" class="score-input" style="width:38px;padding:3px;" min="0" max="99" value="' + (gs.s1 !== undefined ? gs.s1 : '') + '" data-match="' + m.id + '" data-game="' + g + '" data-gs="s1">';
-          html += '<span style="color:var(--text-muted);">-</span>';
-          html += '<input type="number" class="score-input" style="width:38px;padding:3px;" min="0" max="99" value="' + (gs.s2 !== undefined ? gs.s2 : '') + '" data-match="' + m.id + '" data-game="' + g + '" data-gs="s2">';
-          html += '</div>';
-        }
-        html += '</div></div>';
-
-        // Save button for this match
-        html += '<div style="margin-top:8px;display:flex;gap:8px;">';
-        html += '<button class="btn btn-success btn-sm" data-save-match="' + m.id + '">儲存成績</button>';
-        if (m.completed) {
-          html += '<button class="btn btn-outline btn-sm" data-reset-match="' + m.id + '">重置</button>';
-        }
-        html += '</div>';
-
-        html += '</div>';
-      });
-
+      if (!matches.length) return;
+      html += '<div class="card"><div class="card-title">' + esc(group.name) + '</div>';
+      matches.forEach((m, mi) => { html += renderMatchEditor(m, 'gm', gi, mi); });
       html += '</div>';
     });
-
     container.innerHTML = html;
+    bindMatchEditorEvents(container);
+  }
 
-    // Event listeners for saving match results
-    container.querySelectorAll('[data-save-match]').forEach(btn => {
-      btn.addEventListener('click', () => saveMatchResult(btn.dataset.saveMatch));
+  function renderMatchEditor(m, prefix, gi, mi) {
+    const team1 = getTeamById(data.teams, m.team1Id);
+    const team2 = getTeamById(data.teams, m.team2Id);
+    const t1n = team1 ? team1.name : 'TBD', t2n = team2 ? team2.name : 'TBD';
+    const uid = prefix + '_' + gi + '_' + mi;
+    const statusCls = m.completed ? 'badge-green' : 'badge-yellow';
+    const statusTxt = m.completed ? '已完成 (' + m.score1 + ':' + m.score2 + ')' : '未開始';
+
+    let html = '<div class="match-edit-item">';
+    html += '<div class="match-edit-header"><div class="match-edit-teams"><span>' + esc(t1n) + '</span><span class="vs">vs</span><span>' + esc(t2n) + '</span></div>';
+    html += '<span class="badge ' + statusCls + '">' + statusTxt + '</span></div>';
+
+    // 5 點雙打
+    if (!m.doubles || m.doubles.length < 5) m.doubles = createEmptyDoubles();
+    m.doubles.forEach((d, di) => {
+      html += '<div class="doubles-edit-item">';
+      html += '<div class="doubles-edit-label">第 ' + (di + 1) + ' 點雙打</div>';
+      // 球員選擇
+      html += '<div class="doubles-edit-row">';
+      html += playerSelect(uid + '_d' + di + '_t1p0', team1, d.t1p[0]) + ' / ' + playerSelect(uid + '_d' + di + '_t1p1', team1, d.t1p[1]);
+      html += '<span style="color:var(--text-muted);font-weight:600;margin:0 4px;">VS</span>';
+      html += playerSelect(uid + '_d' + di + '_t2p0', team2, d.t2p[0]) + ' / ' + playerSelect(uid + '_d' + di + '_t2p1', team2, d.t2p[1]);
+      html += '</div>';
+      // 各局比分
+      html += '<div class="game-scores">';
+      const maxGames = 5; // 五局三勝最多5局
+      for (let g = 0; g < maxGames; g++) {
+        const gs = (d.games && d.games[g]) || { s1: '', s2: '' };
+        const s1v = gs.s1 !== '' && gs.s1 !== undefined ? gs.s1 : '';
+        const s2v = gs.s2 !== '' && gs.s2 !== undefined ? gs.s2 : '';
+        html += '<div class="game-score-pair">';
+        html += '<input type="number" class="score-input" style="width:36px;padding:3px;" min="0" max="99" value="' + s1v + '" data-uid="' + uid + '_d' + di + '_g' + g + '_s1">';
+        html += '<span style="color:var(--text-muted);">-</span>';
+        html += '<input type="number" class="score-input" style="width:36px;padding:3px;" min="0" max="99" value="' + s2v + '" data-uid="' + uid + '_d' + di + '_g' + g + '_s2">';
+        html += '</div>';
+      }
+      html += '</div></div>';
     });
+    html += '<div style="margin-top:8px;display:flex;gap:8px;">';
+    html += '<button class="btn btn-success btn-sm" data-save-tm="' + m.id + '">儲存整場成績</button>';
+    if (m.completed) html += '<button class="btn btn-outline btn-sm" data-reset-tm="' + m.id + '">重置</button>';
+    html += '</div></div>';
+    return html;
+  }
 
-    container.querySelectorAll('[data-reset-match]').forEach(btn => {
-      btn.addEventListener('click', () => resetMatch(btn.dataset.resetMatch));
+  function playerSelect(uid, team, selectedIdx) {
+    let html = '<select data-uid="' + uid + '" class="form-control" style="flex:1;min-width:70px;padding:4px 6px;font-size:0.82rem;">';
+    html += '<option value="">--</option>';
+    if (team && team.players) {
+      team.players.forEach((p, i) => {
+        const sel = i === selectedIdx ? ' selected' : '';
+        const label = p || ('選手' + (i + 1));
+        html += '<option value="' + i + '"' + sel + '>' + esc(label) + '</option>';
+      });
+    }
+    html += '</select>';
+    return html;
+  }
+
+  function bindMatchEditorEvents(container) {
+    container.querySelectorAll('[data-save-tm]').forEach(btn => {
+      btn.addEventListener('click', () => saveTeamMatch(btn.dataset.saveTm));
+    });
+    container.querySelectorAll('[data-reset-tm]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const m = findMatch(btn.dataset.resetTm);
+        if (!m) return;
+        m.score1 = 0; m.score2 = 0; m.completed = false;
+        m.doubles = createEmptyDoubles();
+        persist(); renderGroupMatches(); showToast('已重置');
+      });
     });
   }
 
-  function saveMatchResult(matchId) {
-    const match = data.groupMatches.find(m => m.id === matchId);
-    if (!match) return;
-
-    const score1Input = document.querySelector('[data-match="' + matchId + '"][data-field="score1"]');
-    const score2Input = document.querySelector('[data-match="' + matchId + '"][data-field="score2"]');
-    match.score1 = parseInt(score1Input.value) || 0;
-    match.score2 = parseInt(score2Input.value) || 0;
-
-    // Collect game scores
-    match.games = [];
-    const gameInputs = document.querySelectorAll('[data-match="' + matchId + '"][data-game]');
-    const gameMap = {};
-    gameInputs.forEach(inp => {
-      const g = inp.dataset.game;
-      if (!gameMap[g]) gameMap[g] = {};
-      gameMap[g][inp.dataset.gs] = parseInt(inp.value) || 0;
-    });
-    Object.keys(gameMap).sort((a, b) => a - b).forEach(g => {
-      match.games.push({ s1: gameMap[g].s1 || 0, s2: gameMap[g].s2 || 0 });
-    });
-
-    match.completed = (match.score1 > 0 || match.score2 > 0);
-    persist();
-    renderGroupMatches();
-    showToast('成績已儲存');
+  function findMatch(id) {
+    let m = data.groupMatches.find(x => x.id === id);
+    if (m) return m;
+    for (const r of data.knockout.rounds) {
+      m = r.matches.find(x => x.id === id);
+      if (m) return m;
+    }
+    return null;
   }
 
-  function resetMatch(matchId) {
-    const match = data.groupMatches.find(m => m.id === matchId);
-    if (!match) return;
-    match.score1 = 0;
-    match.score2 = 0;
-    match.games = [];
-    match.completed = false;
-    persist();
-    renderGroupMatches();
-    showToast('成績已重置');
+  function saveTeamMatch(matchId) {
+    const m = findMatch(matchId);
+    if (!m) return;
+    // 找出此 match 在 DOM 中的 uid prefix
+    // 讀取每點雙打的球員選擇和比分
+    m.doubles.forEach((d, di) => {
+      // 找球員 selects - 用 uid 模式搜尋
+      const selects = document.querySelectorAll('[data-uid*="_d' + di + '_t"]');
+      // 更精確搜尋：遍歷所有可能的 uid
+      document.querySelectorAll('select[data-uid]').forEach(sel => {
+        const u = sel.dataset.uid;
+        if (!u.includes('_d' + di + '_')) return;
+        // 判斷是否屬於此 match
+        if (u.includes('_t1p0')) {
+          const parent = sel.closest('.match-edit-item');
+          if (parent && parent.querySelector('[data-save-tm="' + matchId + '"]')) {
+            d.t1p[0] = sel.value !== '' ? parseInt(sel.value) : null;
+          }
+        }
+        if (u.includes('_t1p1')) {
+          const parent = sel.closest('.match-edit-item');
+          if (parent && parent.querySelector('[data-save-tm="' + matchId + '"]')) {
+            d.t1p[1] = sel.value !== '' ? parseInt(sel.value) : null;
+          }
+        }
+        if (u.includes('_t2p0')) {
+          const parent = sel.closest('.match-edit-item');
+          if (parent && parent.querySelector('[data-save-tm="' + matchId + '"]')) {
+            d.t2p[0] = sel.value !== '' ? parseInt(sel.value) : null;
+          }
+        }
+        if (u.includes('_t2p1')) {
+          const parent = sel.closest('.match-edit-item');
+          if (parent && parent.querySelector('[data-save-tm="' + matchId + '"]')) {
+            d.t2p[1] = sel.value !== '' ? parseInt(sel.value) : null;
+          }
+        }
+      });
+
+      // 讀取各局比分
+      d.games = [];
+      d.score1 = 0; d.score2 = 0;
+      const matchItem = document.querySelector('[data-save-tm="' + matchId + '"]')?.closest('.match-edit-item');
+      if (!matchItem) return;
+
+      for (let g = 0; g < 5; g++) {
+        const inp1 = matchItem.querySelector('[data-uid*="_d' + di + '_g' + g + '_s1"]');
+        const inp2 = matchItem.querySelector('[data-uid*="_d' + di + '_g' + g + '_s2"]');
+        if (inp1 && inp2 && (inp1.value !== '' || inp2.value !== '')) {
+          const s1 = parseInt(inp1.value) || 0;
+          const s2 = parseInt(inp2.value) || 0;
+          if (s1 > 0 || s2 > 0) {
+            d.games.push({ s1, s2 });
+            if (s1 > s2) d.score1++;
+            else if (s2 > s1) d.score2++;
+          }
+        }
+      }
+      d.completed = d.games.length > 0 && (d.score1 >= 3 || d.score2 >= 3);
+    });
+    recalcTeamScore(m);
+    persist(); renderGroupMatches(); renderKnockoutRounds(); showToast('成績已儲存');
   }
 
   // ===== Knockout =====
   function setupKnockout() {
-    document.getElementById('btnAddRound').addEventListener('click', addKnockoutRound);
+    document.getElementById('btnAddRound').addEventListener('click', () => {
+      const name = prompt('輸入輪次名稱：', ['八強','準決賽','季軍戰','決賽'][data.knockout.rounds.length] || '輪次');
+      if (!name) return;
+      data.knockout.rounds.push({ name, matches: [] }); persist(); renderKnockoutRounds();
+    });
     document.getElementById('btnAutoKnockout').addEventListener('click', autoKnockout);
   }
 
-  function addKnockoutRound() {
-    const roundNames = ['八強', '四強', '準決賽', '決賽', '季軍戰'];
-    const name = prompt('輸入輪次名稱：', roundNames[data.knockout.rounds.length] || '輪次');
-    if (!name) return;
-    data.knockout.rounds.push({ name, matches: [] });
-    persist();
-    renderKnockoutRounds();
-  }
-
   function autoKnockout() {
-    if (data.groups.length === 0) {
-      showToast('請先完成小組賽分組');
-      return;
-    }
-
-    // Get qualified teams from each group
-    const qualifiedTeams = [];
-    data.groups.forEach((group, gi) => {
-      const standings = calculateStandings(gi, group.teamIds, data.groupMatches);
-      const advanceCount = group.advanceCount || 2;
-      standings.slice(0, advanceCount).forEach(s => {
-        qualifiedTeams.push({ teamId: s.teamId, groupIndex: gi, rank: standings.indexOf(s) });
+    if (!data.groups.length) { showToast('請先分組'); return; }
+    const qualified = [];
+    data.groups.forEach((g, gi) => {
+      const st = calculateStandings(gi, g.teamIds, data.groupMatches);
+      st.slice(0, g.advanceCount || 2).forEach((s, rank) => {
+        qualified.push({ teamId: s.teamId, gi, rank });
       });
     });
-
-    if (qualifiedTeams.length < 2) {
-      showToast('晉級隊伍不足，無法產生淘汰賽');
-      return;
-    }
-
-    const numTeams = qualifiedTeams.length;
+    if (qualified.length < 2) { showToast('晉級隊伍不足'); return; }
+    const n = qualified.length;
     const rounds = [];
+    const emptyD = () => createEmptyDoubles();
 
-    if (numTeams <= 2) {
-      // Just final
-      rounds.push({
-        name: '決賽',
-        matches: [{
-          id: 'k_final_1',
-          team1Id: qualifiedTeams[0] ? qualifiedTeams[0].teamId : null,
-          team2Id: qualifiedTeams[1] ? qualifiedTeams[1].teamId : null,
-          score1: 0, score2: 0, games: [], completed: false
-        }]
-      });
-    } else if (numTeams <= 4) {
-      // SF + Final + 3rd
-      const sfMatches = [];
-      // Cross-group matching: Group A #1 vs Group B #2, Group B #1 vs Group A #2
-      if (data.groups.length === 2 && qualifiedTeams.length === 4) {
-        const ga = qualifiedTeams.filter(t => t.groupIndex === 0).sort((a, b) => a.rank - b.rank);
-        const gb = qualifiedTeams.filter(t => t.groupIndex === 1).sort((a, b) => a.rank - b.rank);
-        sfMatches.push({ id: 'k_sf_1', team1Id: ga[0].teamId, team2Id: gb[1].teamId, score1: 0, score2: 0, games: [], completed: false });
-        sfMatches.push({ id: 'k_sf_2', team1Id: gb[0].teamId, team2Id: ga[1].teamId, score1: 0, score2: 0, games: [], completed: false });
-      } else {
-        for (let i = 0; i < numTeams; i += 2) {
-          sfMatches.push({
-            id: 'k_sf_' + (i / 2 + 1),
-            team1Id: qualifiedTeams[i] ? qualifiedTeams[i].teamId : null,
-            team2Id: qualifiedTeams[i + 1] ? qualifiedTeams[i + 1].teamId : null,
-            score1: 0, score2: 0, games: [], completed: false
-          });
-        }
+    if (n <= 2) {
+      rounds.push({ name: '決賽', matches: [{ id: 'k_f_1', team1Id: qualified[0]?.teamId || null, team2Id: qualified[1]?.teamId || null, score1: 0, score2: 0, doubles: emptyD(), completed: false }] });
+    } else if (n <= 4) {
+      const ga = qualified.filter(t => t.gi === 0), gb = qualified.filter(t => t.gi === 1);
+      const sf = [];
+      if (ga.length >= 2 && gb.length >= 2) {
+        sf.push({ id: 'k_sf_1', team1Id: ga[0].teamId, team2Id: gb[1].teamId, score1: 0, score2: 0, doubles: emptyD(), completed: false });
+        sf.push({ id: 'k_sf_2', team1Id: gb[0].teamId, team2Id: ga[1].teamId, score1: 0, score2: 0, doubles: emptyD(), completed: false });
       }
-      rounds.push({ name: '準決賽', matches: sfMatches });
-      rounds.push({ name: '季軍戰', matches: [{ id: 'k_3rd_1', team1Id: null, team2Id: null, score1: 0, score2: 0, games: [], completed: false }] });
-      rounds.push({ name: '決賽', matches: [{ id: 'k_final_1', team1Id: null, team2Id: null, score1: 0, score2: 0, games: [], completed: false }] });
+      rounds.push({ name: '準決賽', matches: sf });
+      rounds.push({ name: '季軍戰', matches: [{ id: 'k_3rd_1', team1Id: null, team2Id: null, score1: 0, score2: 0, doubles: emptyD(), completed: false }] });
+      rounds.push({ name: '決賽', matches: [{ id: 'k_f_1', team1Id: null, team2Id: null, score1: 0, score2: 0, doubles: emptyD(), completed: false }] });
     } else {
-      // QF + SF + Final + 3rd
-      const qfMatches = [];
-      // Cross-group matching for 8 teams
-      if (data.groups.length === 2 && numTeams === 8) {
-        const ga = qualifiedTeams.filter(t => t.groupIndex === 0).sort((a, b) => a.rank - b.rank);
-        const gb = qualifiedTeams.filter(t => t.groupIndex === 1).sort((a, b) => a.rank - b.rank);
-        qfMatches.push({ id: 'k_qf_1', team1Id: ga[0].teamId, team2Id: gb[3].teamId, score1: 0, score2: 0, games: [], completed: false });
-        qfMatches.push({ id: 'k_qf_2', team1Id: gb[1].teamId, team2Id: ga[2].teamId, score1: 0, score2: 0, games: [], completed: false });
-        qfMatches.push({ id: 'k_qf_3', team1Id: ga[1].teamId, team2Id: gb[2].teamId, score1: 0, score2: 0, games: [], completed: false });
-        qfMatches.push({ id: 'k_qf_4', team1Id: gb[0].teamId, team2Id: ga[3].teamId, score1: 0, score2: 0, games: [], completed: false });
-      } else {
-        for (let i = 0; i < numTeams; i += 2) {
-          if (i + 1 < numTeams) {
-            qfMatches.push({
-              id: 'k_qf_' + (i / 2 + 1),
-              team1Id: qualifiedTeams[i].teamId,
-              team2Id: qualifiedTeams[i + 1].teamId,
-              score1: 0, score2: 0, games: [], completed: false
-            });
-          }
-        }
+      const qf = [];
+      for (let i = 0; i < n; i += 2) {
+        if (i + 1 < n) qf.push({ id: 'k_qf_' + (i / 2 + 1), team1Id: qualified[i].teamId, team2Id: qualified[i + 1].teamId, score1: 0, score2: 0, doubles: emptyD(), completed: false });
       }
-      rounds.push({ name: '八強', matches: qfMatches });
-      const sfCount = Math.ceil(qfMatches.length / 2);
-      const sfMatches = [];
-      for (let i = 0; i < sfCount; i++) {
-        sfMatches.push({ id: 'k_sf_' + (i + 1), team1Id: null, team2Id: null, score1: 0, score2: 0, games: [], completed: false });
-      }
-      rounds.push({ name: '準決賽', matches: sfMatches });
-      rounds.push({ name: '季軍戰', matches: [{ id: 'k_3rd_1', team1Id: null, team2Id: null, score1: 0, score2: 0, games: [], completed: false }] });
-      rounds.push({ name: '決賽', matches: [{ id: 'k_final_1', team1Id: null, team2Id: null, score1: 0, score2: 0, games: [], completed: false }] });
+      rounds.push({ name: '八強', matches: qf });
+      const sfc = Math.ceil(qf.length / 2);
+      const sfm = [];
+      for (let i = 0; i < sfc; i++) sfm.push({ id: 'k_sf_' + (i + 1), team1Id: null, team2Id: null, score1: 0, score2: 0, doubles: emptyD(), completed: false });
+      rounds.push({ name: '準決賽', matches: sfm });
+      rounds.push({ name: '季軍戰', matches: [{ id: 'k_3rd_1', team1Id: null, team2Id: null, score1: 0, score2: 0, doubles: emptyD(), completed: false }] });
+      rounds.push({ name: '決賽', matches: [{ id: 'k_f_1', team1Id: null, team2Id: null, score1: 0, score2: 0, doubles: emptyD(), completed: false }] });
     }
-
-    data.knockout.rounds = rounds;
-    persist();
-    renderKnockoutRounds();
-    showToast('淘汰賽已自動產生');
+    data.knockout.rounds = rounds; persist(); renderKnockoutRounds(); showToast('淘汰賽已產生');
   }
 
   function renderKnockoutRounds() {
     const container = document.getElementById('knockoutRoundsContainer');
     const rounds = data.knockout.rounds;
-
-    if (rounds.length === 0) {
-      container.innerHTML = '<div class="empty-state"><p>尚未設定淘汰賽</p></div>';
-      return;
-    }
-
+    if (!rounds.length) { container.innerHTML = '<div class="empty-state"><p>尚未設定淘汰賽</p></div>'; return; }
     let html = '';
     rounds.forEach((round, ri) => {
-      html += '<div class="knockout-round-card">';
-      html += '<div class="knockout-round-header">';
-      html += '<h3>' + escHtml(round.name) + '</h3>';
-      html += '<div class="btn-group">';
-      html += '<button class="btn btn-primary btn-sm" data-add-ko-match="' + ri + '">新增比賽</button>';
-      html += '<button class="btn btn-danger btn-sm" data-remove-round="' + ri + '">刪除輪次</button>';
-      html += '</div></div>';
+      html += '<div class="knockout-round-card"><div class="knockout-round-header"><h3>' + esc(round.name) + '</h3>';
+      html += '<div class="btn-group"><button class="btn btn-primary btn-sm" data-add-ko="' + ri + '">新增比賽</button>';
+      html += '<button class="btn btn-danger btn-sm" data-del-round="' + ri + '">刪除輪次</button></div></div>';
 
       round.matches.forEach((m, mi) => {
-        const t1Name = m.team1Id ? getTeamName(data.teams, m.team1Id) : 'TBD';
-        const t2Name = m.team2Id ? getTeamName(data.teams, m.team2Id) : 'TBD';
-        const statusClass = m.completed ? 'badge-green' : 'badge-yellow';
-        const statusText = m.completed ? '已完成' : '未開始';
+        if (!m.doubles || m.doubles.length < 5) m.doubles = createEmptyDoubles();
+        const t1n = m.team1Id ? getTeamName(data.teams, m.team1Id) : 'TBD';
+        const t2n = m.team2Id ? getTeamName(data.teams, m.team2Id) : 'TBD';
+        const sc = m.completed ? 'badge-green' : 'badge-yellow';
+        const st = m.completed ? m.score1 + ':' + m.score2 : '未開始';
 
         html += '<div class="match-edit-item">';
-        html += '<div class="match-edit-header">';
-        html += '<span class="badge ' + statusClass + '">' + statusText + '</span>';
-        html += '<button class="btn btn-danger btn-sm" data-remove-ko-match="' + ri + '_' + mi + '">刪除</button>';
-        html += '</div>';
-
-        // Team selection dropdowns
+        html += '<div class="match-edit-header"><span class="badge ' + sc + '">' + st + '</span>';
+        html += '<button class="btn btn-danger btn-sm" data-del-ko="' + ri + '_' + mi + '">刪除</button></div>';
+        // 隊伍選擇
         html += '<div class="score-input-row">';
-        html += '<select class="form-control" style="flex:1;" data-ko-team="' + ri + '_' + mi + '_1" value="' + (m.team1Id || '') + '">';
-        html += '<option value="">選擇隊伍...</option>';
-        data.teams.forEach(t => {
-          const sel = t.id === m.team1Id ? ' selected' : '';
-          html += '<option value="' + t.id + '"' + sel + '>' + escHtml(t.name) + '</option>';
-        });
-        html += '</select>';
-        html += '<span style="color:var(--text-muted);font-weight:600;">VS</span>';
-        html += '<select class="form-control" style="flex:1;" data-ko-team="' + ri + '_' + mi + '_2">';
-        html += '<option value="">選擇隊伍...</option>';
-        data.teams.forEach(t => {
-          const sel = t.id === m.team2Id ? ' selected' : '';
-          html += '<option value="' + t.id + '"' + sel + '>' + escHtml(t.name) + '</option>';
-        });
+        html += '<select class="form-control" style="flex:1;" data-ko-team="' + ri + '_' + mi + '_1"><option value="">選擇隊伍</option>';
+        data.teams.forEach(t => { html += '<option value="' + t.id + '"' + (t.id === m.team1Id ? ' selected' : '') + '>' + esc(t.name) + '</option>'; });
+        html += '</select><span style="color:var(--text-muted);font-weight:600;">VS</span>';
+        html += '<select class="form-control" style="flex:1;" data-ko-team="' + ri + '_' + mi + '_2"><option value="">選擇隊伍</option>';
+        data.teams.forEach(t => { html += '<option value="' + t.id + '"' + (t.id === m.team2Id ? ' selected' : '') + '>' + esc(t.name) + '</option>'; });
         html += '</select></div>';
-
-        // Score inputs
-        html += '<div class="score-input-row" style="margin-top:8px;">';
-        html += '<span style="color:var(--text-secondary);font-size:0.85rem;">' + escHtml(t1Name) + '</span>';
-        html += '<input type="number" class="score-input" min="0" max="4" value="' + m.score1 + '" data-ko-score="' + ri + '_' + mi + '_1">';
-        html += '<span style="color:var(--text-muted);">:</span>';
-        html += '<input type="number" class="score-input" min="0" max="4" value="' + m.score2 + '" data-ko-score="' + ri + '_' + mi + '_2">';
-        html += '<span style="color:var(--text-secondary);font-size:0.85rem;">' + escHtml(t2Name) + '</span>';
-        html += '</div>';
-
-        // Game-by-game scores
-        html += '<div style="margin-top:8px;">';
-        html += '<label style="font-size:0.8rem;color:var(--text-muted);">各局比分（選填）：</label>';
-        html += '<div class="game-scores">';
-        const totalGames = (m.score1 || 0) + (m.score2 || 0);
-        for (let g = 0; g < Math.max(totalGames, m.games ? m.games.length : 0); g++) {
-          const gs = (m.games && m.games[g]) || { s1: '', s2: '' };
-          html += '<div class="game-score-pair">';
-          html += '<input type="number" class="score-input" style="width:38px;padding:3px;" min="0" max="99" value="' + (gs.s1 !== undefined ? gs.s1 : '') + '" data-ko-game="' + ri + '_' + mi + '_' + g + '_s1">';
-          html += '<span style="color:var(--text-muted);">-</span>';
-          html += '<input type="number" class="score-input" style="width:38px;padding:3px;" min="0" max="99" value="' + (gs.s2 !== undefined ? gs.s2 : '') + '" data-ko-game="' + ri + '_' + mi + '_' + g + '_s2">';
-          html += '</div>';
-        }
-        html += '</div></div>';
-
-        html += '<div style="margin-top:8px;">';
-        html += '<button class="btn btn-success btn-sm" data-save-ko="' + ri + '_' + mi + '">儲存成績</button>';
-        html += '</div>';
-
+        // 5點雙打
+        const team1 = getTeamById(data.teams, m.team1Id);
+        const team2 = getTeamById(data.teams, m.team2Id);
+        const kouid = 'ko_' + ri + '_' + mi;
+        m.doubles.forEach((d, di) => {
+          const maxG = 7; // 淘汰賽七局四勝
+          html += '<div class="doubles-edit-item"><div class="doubles-edit-label">第 ' + (di + 1) + ' 點</div>';
+          html += '<div class="doubles-edit-row">';
+          html += playerSelect(kouid + '_d' + di + '_t1p0', team1, d.t1p[0]) + ' / ' + playerSelect(kouid + '_d' + di + '_t1p1', team1, d.t1p[1]);
+          html += '<span style="color:var(--text-muted);font-weight:600;margin:0 4px;">VS</span>';
+          html += playerSelect(kouid + '_d' + di + '_t2p0', team2, d.t2p[0]) + ' / ' + playerSelect(kouid + '_d' + di + '_t2p1', team2, d.t2p[1]);
+          html += '</div><div class="game-scores">';
+          for (let g = 0; g < maxG; g++) {
+            const gs = (d.games && d.games[g]) || {};
+            html += '<div class="game-score-pair"><input type="number" class="score-input" style="width:36px;padding:3px;" min="0" max="99" value="' + (gs.s1 != null ? gs.s1 : '') + '" data-uid="' + kouid + '_d' + di + '_g' + g + '_s1">';
+            html += '<span style="color:var(--text-muted);">-</span><input type="number" class="score-input" style="width:36px;padding:3px;" min="0" max="99" value="' + (gs.s2 != null ? gs.s2 : '') + '" data-uid="' + kouid + '_d' + di + '_g' + g + '_s2"></div>';
+          }
+          html += '</div></div>';
+        });
+        html += '<button class="btn btn-success btn-sm" style="margin-top:8px;" data-save-ko="' + ri + '_' + mi + '">儲存成績</button>';
         html += '</div>';
       });
-
       html += '</div>';
     });
-
     container.innerHTML = html;
 
-    // Event listeners
-    container.querySelectorAll('[data-add-ko-match]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ri = parseInt(btn.dataset.addKoMatch);
-        const mi = data.knockout.rounds[ri].matches.length;
-        data.knockout.rounds[ri].matches.push({
-          id: 'k_' + ri + '_' + mi + '_' + Date.now(),
-          team1Id: null, team2Id: null,
-          score1: 0, score2: 0, games: [], completed: false
-        });
-        persist();
-        renderKnockoutRounds();
-      });
-    });
-
-    container.querySelectorAll('[data-remove-round]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (!confirm('確定要刪除此輪次？')) return;
-        data.knockout.rounds.splice(parseInt(btn.dataset.removeRound), 1);
-        persist();
-        renderKnockoutRounds();
-      });
-    });
-
-    container.querySelectorAll('[data-remove-ko-match]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const [ri, mi] = btn.dataset.removeKoMatch.split('_').map(Number);
-        data.knockout.rounds[ri].matches.splice(mi, 1);
-        persist();
-        renderKnockoutRounds();
-      });
-    });
-
-    container.querySelectorAll('[data-save-ko]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const [ri, mi] = btn.dataset.saveKo.split('_').map(Number);
-        saveKnockoutMatch(ri, mi);
-      });
-    });
+    container.querySelectorAll('[data-add-ko]').forEach(b => b.addEventListener('click', () => {
+      const ri = parseInt(b.dataset.addKo);
+      data.knockout.rounds[ri].matches.push({ id: 'k_' + ri + '_' + Date.now(), team1Id: null, team2Id: null, score1: 0, score2: 0, doubles: createEmptyDoubles(), completed: false });
+      persist(); renderKnockoutRounds();
+    }));
+    container.querySelectorAll('[data-del-round]').forEach(b => b.addEventListener('click', () => {
+      if (!confirm('刪除此輪次？')) return;
+      data.knockout.rounds.splice(parseInt(b.dataset.delRound), 1); persist(); renderKnockoutRounds();
+    }));
+    container.querySelectorAll('[data-del-ko]').forEach(b => b.addEventListener('click', () => {
+      const [ri, mi] = b.dataset.delKo.split('_').map(Number);
+      data.knockout.rounds[ri].matches.splice(mi, 1); persist(); renderKnockoutRounds();
+    }));
+    container.querySelectorAll('[data-save-ko]').forEach(b => b.addEventListener('click', () => {
+      const [ri, mi] = b.dataset.saveKo.split('_').map(Number);
+      saveKOMatch(ri, mi);
+    }));
   }
 
-  function saveKnockoutMatch(ri, mi) {
-    const match = data.knockout.rounds[ri].matches[mi];
+  function saveKOMatch(ri, mi) {
+    const m = data.knockout.rounds[ri].matches[mi];
+    const t1s = document.querySelector('[data-ko-team="' + ri + '_' + mi + '_1"]');
+    const t2s = document.querySelector('[data-ko-team="' + ri + '_' + mi + '_2"]');
+    m.team1Id = t1s.value ? parseInt(t1s.value) : null;
+    m.team2Id = t2s.value ? parseInt(t2s.value) : null;
+    const kouid = 'ko_' + ri + '_' + mi;
+    const matchItem = document.querySelector('[data-save-ko="' + ri + '_' + mi + '"]')?.closest('.match-edit-item');
+    if (!matchItem) return;
 
-    // Get team selections
-    const t1Select = document.querySelector('[data-ko-team="' + ri + '_' + mi + '_1"]');
-    const t2Select = document.querySelector('[data-ko-team="' + ri + '_' + mi + '_2"]');
-    match.team1Id = t1Select.value ? parseInt(t1Select.value) : null;
-    match.team2Id = t2Select.value ? parseInt(t2Select.value) : null;
-
-    // Get scores
-    const s1Input = document.querySelector('[data-ko-score="' + ri + '_' + mi + '_1"]');
-    const s2Input = document.querySelector('[data-ko-score="' + ri + '_' + mi + '_2"]');
-    match.score1 = parseInt(s1Input.value) || 0;
-    match.score2 = parseInt(s2Input.value) || 0;
-
-    // Get game scores
-    match.games = [];
-    const totalGames = match.score1 + match.score2;
-    for (let g = 0; g < totalGames; g++) {
-      const gs1 = document.querySelector('[data-ko-game="' + ri + '_' + mi + '_' + g + '_s1"]');
-      const gs2 = document.querySelector('[data-ko-game="' + ri + '_' + mi + '_' + g + '_s2"]');
-      if (gs1 && gs2) {
-        match.games.push({ s1: parseInt(gs1.value) || 0, s2: parseInt(gs2.value) || 0 });
+    m.doubles.forEach((d, di) => {
+      // 球員
+      ['t1p0','t1p1','t2p0','t2p1'].forEach(key => {
+        const sel = matchItem.querySelector('[data-uid="' + kouid + '_d' + di + '_' + key + '"]');
+        if (!sel) return;
+        const val = sel.value !== '' ? parseInt(sel.value) : null;
+        if (key === 't1p0') d.t1p[0] = val;
+        if (key === 't1p1') d.t1p[1] = val;
+        if (key === 't2p0') d.t2p[0] = val;
+        if (key === 't2p1') d.t2p[1] = val;
+      });
+      // 各局
+      d.games = []; d.score1 = 0; d.score2 = 0;
+      for (let g = 0; g < 7; g++) {
+        const i1 = matchItem.querySelector('[data-uid="' + kouid + '_d' + di + '_g' + g + '_s1"]');
+        const i2 = matchItem.querySelector('[data-uid="' + kouid + '_d' + di + '_g' + g + '_s2"]');
+        if (i1 && i2 && (i1.value !== '' || i2.value !== '')) {
+          const s1 = parseInt(i1.value) || 0, s2 = parseInt(i2.value) || 0;
+          if (s1 > 0 || s2 > 0) {
+            d.games.push({ s1, s2 });
+            if (s1 > s2) d.score1++; else if (s2 > s1) d.score2++;
+          }
+        }
       }
-    }
-
-    match.completed = match.team1Id && match.team2Id && (match.score1 > 0 || match.score2 > 0);
-    persist();
-    renderKnockoutRounds();
-    showToast('淘汰賽成績已儲存');
+      d.completed = d.games.length > 0 && (d.score1 >= 4 || d.score2 >= 4);
+    });
+    recalcTeamScore(m);
+    persist(); renderKnockoutRounds(); showToast('淘汰賽成績已儲存');
   }
 
   // ===== Share =====
   function setupShare() {
-    document.getElementById('btnCopyView').addEventListener('click', () => {
-      const url = document.getElementById('viewUrl').value;
-      copyToClipboard(url);
-      showToast('觀看連結已複製');
+    document.getElementById('btnCopyView').addEventListener('click', () => { copy(document.getElementById('viewUrl').value); showToast('觀看連結已複製'); });
+    document.getElementById('btnCopyAdmin').addEventListener('click', () => { copy(document.getElementById('adminUrl').value); showToast('管理連結已複製'); });
+    document.getElementById('btnExport').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = (data.tournament.name || 'tournament') + '.json'; a.click(); showToast('已匯出');
     });
-
-    document.getElementById('btnCopyAdmin').addEventListener('click', () => {
-      const url = document.getElementById('adminUrl').value;
-      copyToClipboard(url);
-      showToast('管理連結已複製');
+    document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileImport').click());
+    document.getElementById('fileImport').addEventListener('change', e => {
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        try { const d = JSON.parse(ev.target.result); if (d.tournament && d.teams) { data = d; persist(); renderAll(); showToast('已匯入'); } else showToast('格式錯誤'); }
+        catch (err) { showToast('匯入失敗'); }
+      };
+      r.readAsText(f); e.target.value = '';
     });
-
-    document.getElementById('btnExport').addEventListener('click', exportJSON);
-    document.getElementById('btnImport').addEventListener('click', () => {
-      document.getElementById('fileImport').click();
-    });
-    document.getElementById('fileImport').addEventListener('change', importJSON);
-
     document.getElementById('btnReset').addEventListener('click', () => {
-      if (!confirm('確定要重置所有資料？此操作無法復原！')) return;
-      if (!confirm('真的確定嗎？所有比賽資料都會被清除。')) return;
-      data = getDefaultData();
-      persist();
-      renderAll();
-      showToast('所有資料已重置');
+      if (!confirm('確定重置？')) return; if (!confirm('真的確定？')) return;
+      data = getDefaultData(); persist(); renderAll(); showToast('已重置');
     });
   }
-
   function updateShareLinks() {
     document.getElementById('viewUrl').value = generateViewURL(data);
     document.getElementById('adminUrl').value = generateAdminURL(data);
   }
-
-  function copyToClipboard(text) {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
-    } else {
-      fallbackCopy(text);
-    }
+  function copy(text) {
+    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => fbCopy(text));
+    else fbCopy(text);
+  }
+  function fbCopy(text) {
+    const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
   }
 
-  function fallbackCopy(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-  }
+  function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
-  function exportJSON() {
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (data.tournament.name || 'tournament') + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('資料已匯出');
-  }
-
-  function importJSON(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (ev) {
-      try {
-        const imported = JSON.parse(ev.target.result);
-        if (imported.tournament && imported.teams) {
-          data = imported;
-          persist();
-          renderAll();
-          showToast('資料已匯入');
-        } else {
-          showToast('無效的資料格式');
-        }
-      } catch (err) {
-        showToast('匯入失敗：' + err.message);
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  }
-
-  // ===== Utilities =====
-  function escHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  // Init
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
