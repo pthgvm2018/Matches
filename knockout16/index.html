@@ -7,62 +7,56 @@
   <link rel="stylesheet" href="../css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
   <style>
-    /* ===== 樹狀對戰表 (Flexbox Bracket) ===== */
+    /* ===== 樹狀對戰表 (Pure Flexbox Bracket) ===== */
     .bracket-wrap { overflow-x:auto; padding:16px 0; }
     .bracket { display:flex; flex-direction:row; }
 
-    /* 每個 round 為一欄 */
     .bracket .round {
       display:flex; flex-direction:column; justify-content:center;
-      width:160px; list-style:none; padding:0; margin:0;
+      width:200px; list-style:none; padding:0; margin:0;
     }
-    /* 輪次之間的 spacer 欄 */
-    .bracket .round-spacer {
-      display:flex; flex-direction:column; justify-content:center;
-      width:24px; list-style:none; padding:0; margin:0;
-    }
-    .bracket .round-spacer .spacer { flex-grow:1; }
-    .bracket .round-spacer .spacer:first-child,
-    .bracket .round-spacer .spacer:last-child { flex-grow:.5; }
-    .bracket .round-spacer .connector-top { flex-grow:1; border-bottom:2px solid #4a5568; }
-    .bracket .round-spacer .connector-btm { flex-grow:1; border-top:2px solid #4a5568; }
-    .bracket .round-spacer .connector-mid { border-right:2px solid #4a5568; min-height:0; }
-
-    /* match 內部的 spacer */
     .bracket .round .spacer { flex-grow:1; }
     .bracket .round .spacer:first-child,
     .bracket .round .spacer:last-child { flex-grow:.5; }
     .bracket .round .game-spacer {
-      flex-grow:1; min-height:16px;
+      flex-grow:1; min-height:20px;
       border-right:2px solid #4a5568;
     }
 
-    /* 隊伍行 */
     .bracket .round li.game {
-      padding:5px 10px; font-size:0.82rem;
+      padding:6px 12px; font-size:0.82rem;
       display:flex; justify-content:space-between; align-items:center;
-      white-space:nowrap; background:var(--surface);
+      white-space:nowrap;
     }
     .bracket .round li.game-top { border-bottom:2px solid #4a5568; }
     .bracket .round li.game-bottom { border-top:2px solid #4a5568; }
-    .bracket .round li.game .tname { flex:1; overflow:hidden; text-overflow:ellipsis; color:var(--text-secondary); }
-    .bracket .round li.game .tscore { font-weight:800; min-width:20px; text-align:center; margin-left:8px; color:var(--text-secondary); }
+
+    .bracket .round li.game .tname {
+      flex:1; overflow:hidden; text-overflow:ellipsis;
+      color:var(--text-secondary); background:var(--surface);
+      padding:2px 6px; margin-right:4px;
+    }
+    .bracket .round li.game .tscore {
+      font-weight:800; min-width:22px; text-align:center;
+      color:var(--text-secondary); background:var(--surface); padding:2px 4px;
+    }
     .bracket .round li.game.winner .tname { color:var(--accent); font-weight:700; }
     .bracket .round li.game.winner .tscore { color:var(--accent); }
 
-    /* 冠軍欄 */
+    /* 冠軍標記 */
     .bracket .round-champion {
       display:flex; flex-direction:column; justify-content:center;
-      width:100px; list-style:none; padding:0; margin:0;
+      list-style:none; padding:0; margin:0; width:auto;
     }
     .bracket .round-champion .spacer { flex-grow:1; }
     .bracket .round-champion .champion-name {
-      padding:6px 10px; font-size:0.85rem; font-weight:700;
+      padding:6px 12px; font-size:0.85rem; font-weight:700;
       color:var(--accent); background:var(--surface);
       border:2px solid var(--accent); border-radius:4px; text-align:center;
+      white-space:nowrap;
     }
 
-    /* 季軍戰獨立區塊 */
+    /* 季軍戰 */
     .third-place-section {
       margin-top:20px; padding:12px 16px;
       background:var(--surface); border:1px solid var(--border); border-radius:8px;
@@ -145,8 +139,8 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="js/demo-data.js?v=3"></script>
-  <script src="js/storage.js?v=3"></script>
-  <script src="js/view.js?v=3"></script>
+  <script src="js/demo-data.js?v=4"></script>
+  <script src="js/storage.js?v=4"></script>
+  <script src="js/view.js?v=4"></script>
 </body>
 </html>

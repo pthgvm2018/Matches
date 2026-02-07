@@ -54,7 +54,11 @@
     el.innerHTML = html;
   }
 
-  // ===== 樹狀對戰圖 (Flexbox Bracket with connector lines) =====
+  // ===== 樹狀對戰圖 (Pure Flexbox Bracket) =====
+  // 原理：每個 round 為一欄，靠 border-bottom(game-top)、border-right(game-spacer)、
+  //       border-top(game-bottom) 三條線自然形成 ┐└ 型連接線。
+  //       各欄緊鄰排列，flexbox justify-content:center + flex-grow spacer
+  //       自動讓下一輪的比賽對齊在上一輪兩場比賽的中間。
   function renderBracket() {
     var container = document.getElementById('bracketContainer');
     if (!data.rounds || data.rounds.length === 0) {
@@ -64,45 +68,25 @@
 
     var html = '<div class="bracket-wrap"><div class="bracket">';
 
-    data.rounds.forEach(function (round, ri) {
-      var matches = round.matches;
-
-      // 比賽欄
+    data.rounds.forEach(function (round) {
       html += '<ul class="round">';
-      matches.forEach(function (m, mi) {
+      round.matches.forEach(function (m) {
         html += '<li class="spacer">&nbsp;</li>';
-        html += bracketTeamLi(m, true);   // game-top
+        html += gameLi(m, true);
         html += '<li class="game-spacer">&nbsp;</li>';
-        html += bracketTeamLi(m, false);  // game-bottom
+        html += gameLi(m, false);
       });
       html += '<li class="spacer">&nbsp;</li>';
       html += '</ul>';
-
-      // 連接線欄（最後一輪後接冠軍欄，不需要 connector）
-      if (ri < data.rounds.length - 1) {
-        // 下一輪有 nextCount 場比賽，connector 需要 nextCount 組連線
-        var nextCount = data.rounds[ri + 1].matches.length;
-        html += '<ul class="round-spacer">';
-        for (var c = 0; c < nextCount; c++) {
-          html += '<li class="spacer">&nbsp;</li>';
-          html += '<li class="connector-top">&nbsp;</li>';
-          html += '<li class="connector-mid">&nbsp;</li>';
-          html += '<li class="connector-btm">&nbsp;</li>';
-        }
-        html += '<li class="spacer">&nbsp;</li>';
-        html += '</ul>';
-      }
     });
 
-    // 冠軍欄
-    var finalMatch = data.rounds[data.rounds.length - 1].matches[0];
-    if (finalMatch && finalMatch.completed) {
-      var champId = finalMatch.score1 > finalMatch.score2 ? finalMatch.team1Id : finalMatch.team2Id;
-      html += '<ul class="round-champion">';
-      html += '<li class="spacer">&nbsp;</li>';
-      html += '<li class="champion-name">🏆 ' + esc(getTeamName(data.teams, champId)) + '</li>';
-      html += '<li class="spacer">&nbsp;</li>';
-      html += '</ul>';
+    // 冠軍
+    var fm = data.rounds[data.rounds.length - 1].matches[0];
+    if (fm && fm.completed) {
+      var cid = fm.score1 > fm.score2 ? fm.team1Id : fm.team2Id;
+      html += '<ul class="round-champion"><li class="spacer">&nbsp;</li>';
+      html += '<li class="champion-name">' + esc(getTeamName(data.teams, cid)) + '</li>';
+      html += '<li class="spacer">&nbsp;</li></ul>';
     }
 
     html += '</div>';
@@ -110,15 +94,11 @@
     // 季軍戰
     if (data.thirdPlace) {
       var tp = data.thirdPlace;
-      var t1 = getTeamName(data.teams, tp.team1Id);
-      var t2 = getTeamName(data.teams, tp.team2Id);
       var w1 = tp.completed && tp.score1 > tp.score2;
       var w2 = tp.completed && tp.score2 > tp.score1;
-
-      html += '<div class="third-place-section">';
-      html += '<div class="tp-title">季軍戰</div>';
-      html += '<div class="tp-row' + (w1 ? ' winner' : '') + '"><span class="tname">' + esc(t1) + '</span><span class="tscore">' + (tp.completed ? tp.score1 : '-') + '</span></div>';
-      html += '<div class="tp-row' + (w2 ? ' winner' : '') + '"><span class="tname">' + esc(t2) + '</span><span class="tscore">' + (tp.completed ? tp.score2 : '-') + '</span></div>';
+      html += '<div class="third-place-section"><div class="tp-title">季軍戰</div>';
+      html += '<div class="tp-row' + (w1 ? ' winner' : '') + '"><span class="tname">' + esc(getTeamName(data.teams, tp.team1Id)) + '</span><span class="tscore">' + (tp.completed ? tp.score1 : '-') + '</span></div>';
+      html += '<div class="tp-row' + (w2 ? ' winner' : '') + '"><span class="tname">' + esc(getTeamName(data.teams, tp.team2Id)) + '</span><span class="tscore">' + (tp.completed ? tp.score2 : '-') + '</span></div>';
       html += '</div>';
     }
 
@@ -126,15 +106,14 @@
     container.innerHTML = html;
   }
 
-  function bracketTeamLi(m, isTop) {
+  function gameLi(m, isTop) {
     var tid = isTop ? m.team1Id : m.team2Id;
-    var score = isTop ? m.score1 : m.score2;
-    var otherScore = isTop ? m.score2 : m.score1;
-    var name = getTeamName(data.teams, tid);
-    var isWinner = m.completed && score > otherScore;
-    var s = m.completed ? score : (tid ? '-' : '');
-    var cls = 'game ' + (isTop ? 'game-top' : 'game-bottom') + (isWinner ? ' winner' : '');
-    return '<li class="' + cls + '"><span class="tname">' + esc(name) + '</span><span class="tscore">' + s + '</span></li>';
+    var sc = isTop ? m.score1 : m.score2;
+    var osc = isTop ? m.score2 : m.score1;
+    var w = m.completed && sc > osc;
+    var s = m.completed ? sc : (tid ? '-' : '');
+    var cls = 'game ' + (isTop ? 'game-top' : 'game-bottom') + (w ? ' winner' : '');
+    return '<li class="' + cls + '"><span class="tname">' + esc(getTeamName(data.teams, tid)) + '</span><span class="tscore">' + s + '</span></li>';
   }
 
   // ===== 比賽詳情（可展開各局比分） =====
