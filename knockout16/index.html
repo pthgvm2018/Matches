@@ -7,53 +7,82 @@
   <link rel="stylesheet" href="../css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
   <style>
-    /* ===== 樹狀對戰表 (Pure Flexbox Bracket) ===== */
+    /* ===== 樹狀對戰表 (Flexbox Bracket + Pseudo-element Connectors) ===== */
     .bracket-wrap { overflow-x:auto; padding:16px 0; }
-    .bracket { display:flex; flex-direction:row; }
-
-    .bracket .round {
-      display:flex; flex-direction:column; justify-content:center;
-      width:200px; list-style:none; padding:0; margin:0;
+    .bracket {
+      display:flex; flex-direction:row; align-items:stretch;
+      gap:40px;
     }
-    .bracket .round .spacer { flex-grow:1; }
-    .bracket .round .spacer:first-child,
-    .bracket .round .spacer:last-child { flex-grow:.5; }
-    .bracket .round .game-spacer {
-      flex-grow:1; min-height:20px;
+
+    /* 每一輪 = 一個垂直欄 */
+    .round {
+      display:flex; flex-direction:column;
+      min-width:180px;
+    }
+
+    /* 每場比賽的外框：flex:1 讓各輪自動對齊 */
+    .match-wrap {
+      flex:1; display:flex; align-items:center;
+      position:relative; min-height:58px;
+    }
+
+    /* 比賽卡片 */
+    .match-box {
+      width:100%; background:var(--surface);
+      border:1px solid var(--border); border-radius:4px;
+      overflow:hidden;
+    }
+    .match-team {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:5px 10px; font-size:0.82rem; white-space:nowrap;
+    }
+    .match-team.top { border-bottom:1px solid var(--border); }
+    .match-team .tname {
+      flex:1; overflow:hidden; text-overflow:ellipsis;
+      color:var(--text-secondary); margin-right:6px;
+    }
+    .match-team .tscore {
+      font-weight:800; min-width:20px; text-align:center;
+      color:var(--text-secondary);
+    }
+    .match-team.winner .tname { color:var(--accent); font-weight:700; }
+    .match-team.winner .tscore { color:var(--accent); }
+
+    /* ── 連接線：往右（分岔線） ── */
+    .match-wrap.connect-next::after {
+      content:""; position:absolute;
+      right:-21px; width:21px; height:50%;
       border-right:2px solid #4a5568;
     }
+    .match-wrap.connect-next:nth-child(odd)::after {
+      top:50%; border-top:2px solid #4a5568;
+    }
+    .match-wrap.connect-next:nth-child(even)::after {
+      top:0; border-bottom:2px solid #4a5568;
+    }
 
-    .bracket .round li.game {
-      padding:6px 12px; font-size:0.82rem;
-      display:flex; justify-content:space-between; align-items:center;
-      white-space:nowrap;
+    /* ── 連接線：從左（匯入線） ── */
+    .match-wrap.connect-prev::before {
+      content:""; position:absolute;
+      left:-21px; width:21px; top:50%;
+      border-top:2px solid #4a5568;
     }
-    .bracket .round li.game-top { border-bottom:2px solid #4a5568; }
-    .bracket .round li.game-bottom { border-top:2px solid #4a5568; }
 
-    .bracket .round li.game .tname {
-      flex:1; overflow:hidden; text-overflow:ellipsis;
-      color:var(--text-secondary); background:var(--surface);
-      padding:2px 6px; margin-right:4px;
+    /* ── 直線連接：決賽→冠軍 ── */
+    .match-wrap.connect-straight::after {
+      content:""; position:absolute;
+      right:-21px; width:21px; top:50%;
+      height:0; border-top:2px solid #4a5568;
+      border-right:none;
     }
-    .bracket .round li.game .tscore {
-      font-weight:800; min-width:22px; text-align:center;
-      color:var(--text-secondary); background:var(--surface); padding:2px 4px;
-    }
-    .bracket .round li.game.winner .tname { color:var(--accent); font-weight:700; }
-    .bracket .round li.game.winner .tscore { color:var(--accent); }
 
     /* 冠軍標記 */
-    .bracket .round-champion {
-      display:flex; flex-direction:column; justify-content:center;
-      list-style:none; padding:0; margin:0; width:auto;
-    }
-    .bracket .round-champion .spacer { flex-grow:1; }
-    .bracket .round-champion .champion-name {
-      padding:6px 12px; font-size:0.85rem; font-weight:700;
+    .round-champ { min-width:auto; }
+    .champion-label {
+      padding:6px 14px; font-size:0.85rem; font-weight:700;
       color:var(--accent); background:var(--surface);
-      border:2px solid var(--accent); border-radius:4px; text-align:center;
-      white-space:nowrap;
+      border:2px solid var(--accent); border-radius:4px;
+      text-align:center; white-space:nowrap;
     }
 
     /* 季軍戰 */
@@ -139,8 +168,8 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="js/demo-data.js?v=4"></script>
-  <script src="js/storage.js?v=4"></script>
-  <script src="js/view.js?v=4"></script>
+  <script src="js/demo-data.js?v=5"></script>
+  <script src="js/storage.js?v=5"></script>
+  <script src="js/view.js?v=5"></script>
 </body>
 </html>
