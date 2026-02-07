@@ -198,6 +198,8 @@
 
   function bindToggle() {
     document.querySelectorAll('[data-toggle]').forEach(el => {
+      if (el._bound) return;
+      el._bound = true;
       el.addEventListener('click', function () {
         const target = document.getElementById(this.dataset.toggle);
         if (!target) return;
