@@ -8,30 +8,68 @@
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
   <style>
     /* ===== 樹狀對戰表 (Flexbox Bracket) ===== */
-    .bracket-wrap { overflow-x:auto; padding:10px 0; }
+    .bracket-wrap { overflow-x:auto; padding:16px 0; }
     .bracket { display:flex; flex-direction:row; }
-    .bracket .round { display:flex; flex-direction:column; justify-content:center; width:170px; list-style:none; padding:0; margin:0; }
+
+    /* 每個 round 為一欄 */
+    .bracket .round {
+      display:flex; flex-direction:column; justify-content:center;
+      width:160px; list-style:none; padding:0; margin:0;
+    }
+    /* 輪次之間的 spacer 欄 */
+    .bracket .round-spacer {
+      display:flex; flex-direction:column; justify-content:center;
+      width:24px; list-style:none; padding:0; margin:0;
+    }
+    .bracket .round-spacer .spacer { flex-grow:1; }
+    .bracket .round-spacer .spacer:first-child,
+    .bracket .round-spacer .spacer:last-child { flex-grow:.5; }
+    .bracket .round-spacer .connector-top { flex-grow:1; border-bottom:2px solid #4a5568; }
+    .bracket .round-spacer .connector-btm { flex-grow:1; border-top:2px solid #4a5568; }
+    .bracket .round-spacer .connector-mid { border-right:2px solid #4a5568; min-height:0; }
+
+    /* match 內部的 spacer */
     .bracket .round .spacer { flex-grow:1; }
     .bracket .round .spacer:first-child,
     .bracket .round .spacer:last-child { flex-grow:.5; }
-    .bracket .round .game-spacer { flex-grow:1; min-height:24px; border-right:2px solid var(--border); }
+    .bracket .round .game-spacer {
+      flex-grow:1; min-height:16px;
+      border-right:2px solid #4a5568;
+    }
 
-    .bracket .round li.game { padding:6px 10px; font-size:0.82rem; display:flex; justify-content:space-between; align-items:center; white-space:nowrap; background:var(--surface); }
-    .bracket .round li.game-top { border-bottom:2px solid var(--border); border-top:1px solid var(--border); border-left:1px solid var(--border); border-radius:4px 0 0 0; }
-    .bracket .round li.game-bottom { border-top:2px solid var(--border); border-bottom:1px solid var(--border); border-left:1px solid var(--border); border-radius:0 0 0 4px; }
+    /* 隊伍行 */
+    .bracket .round li.game {
+      padding:5px 10px; font-size:0.82rem;
+      display:flex; justify-content:space-between; align-items:center;
+      white-space:nowrap; background:var(--surface);
+    }
+    .bracket .round li.game-top { border-bottom:2px solid #4a5568; }
+    .bracket .round li.game-bottom { border-top:2px solid #4a5568; }
     .bracket .round li.game .tname { flex:1; overflow:hidden; text-overflow:ellipsis; color:var(--text-secondary); }
     .bracket .round li.game .tscore { font-weight:800; min-width:20px; text-align:center; margin-left:8px; color:var(--text-secondary); }
     .bracket .round li.game.winner .tname { color:var(--accent); font-weight:700; }
     .bracket .round li.game.winner .tscore { color:var(--accent); }
 
-    /* 輪次標題列 */
-    .bracket .round-header { display:flex; flex-direction:column; justify-content:flex-start; width:170px; list-style:none; padding:0; margin:0; }
-    .round-label { text-align:center; font-size:0.75rem; font-weight:700; color:var(--accent); letter-spacing:1px; padding-bottom:8px; }
+    /* 冠軍欄 */
+    .bracket .round-champion {
+      display:flex; flex-direction:column; justify-content:center;
+      width:100px; list-style:none; padding:0; margin:0;
+    }
+    .bracket .round-champion .spacer { flex-grow:1; }
+    .bracket .round-champion .champion-name {
+      padding:6px 10px; font-size:0.85rem; font-weight:700;
+      color:var(--accent); background:var(--surface);
+      border:2px solid var(--accent); border-radius:4px; text-align:center;
+    }
 
     /* 季軍戰獨立區塊 */
-    .third-place-section { margin-top:16px; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; display:inline-flex; flex-direction:column; font-size:0.82rem; }
-    .third-place-section .tp-title { font-size:0.75rem; font-weight:700; color:var(--accent); margin-bottom:6px; text-align:center; }
-    .third-place-section .tp-row { display:flex; justify-content:space-between; padding:4px 10px; }
+    .third-place-section {
+      margin-top:20px; padding:12px 16px;
+      background:var(--surface); border:1px solid var(--border); border-radius:8px;
+      display:inline-block; font-size:0.85rem; min-width:200px;
+    }
+    .third-place-section .tp-title { font-size:0.8rem; font-weight:700; color:var(--accent); margin-bottom:8px; text-align:center; }
+    .third-place-section .tp-row { display:flex; justify-content:space-between; padding:4px 0; }
     .third-place-section .tp-row.winner .tname { color:var(--accent); font-weight:700; }
     .third-place-section .tp-row.winner .tscore { color:var(--accent); font-weight:800; }
     .third-place-section .tname { min-width:60px; }
@@ -107,8 +145,8 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="js/demo-data.js?v=2"></script>
-  <script src="js/storage.js?v=2"></script>
-  <script src="js/view.js?v=2"></script>
+  <script src="js/demo-data.js?v=3"></script>
+  <script src="js/storage.js?v=3"></script>
+  <script src="js/view.js?v=3"></script>
 </body>
 </html>
