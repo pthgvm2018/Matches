@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理後台 - 16強雙打淘汰賽</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+</head>
+<body>
+
+  <div class="admin-banner">管理模式 - 編輯比賽資料</div>
+
+  <header class="site-header">
+    <div class="container">
+      <h1 id="adminTitle">16強雙打淘汰賽 - 管理後台</h1>
+    </div>
+  </header>
+
+  <nav class="nav-bar">
+    <div class="container">
+      <ul>
+        <li><button class="nav-link active" data-section="settings">賽事設定</button></li>
+        <li><button class="nav-link" data-section="teams">隊伍管理</button></li>
+        <li><button class="nav-link" data-section="bracket">對戰排序</button></li>
+        <li><button class="nav-link" data-section="matches">比賽成績</button></li>
+        <li><button class="nav-link" data-section="share">分享</button></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- Settings -->
+    <section class="section active" id="sec-settings">
+      <div class="section-title"><span class="icon">S</span> 賽事設定</div>
+      <div class="card">
+        <div class="form-group">
+          <label>比賽名稱</label>
+          <input type="text" class="form-control" id="inputName" placeholder="例如：2026 春季雙打淘汰賽">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>日期</label>
+            <input type="text" class="form-control" id="inputDate" placeholder="例如：2026年3月22日">
+          </div>
+          <div class="form-group">
+            <label>地點</label>
+            <input type="text" class="form-control" id="inputLocation" placeholder="例如：台北體育館">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>賽制</label>
+          <select class="form-control" id="inputFormat">
+            <option value="三局兩勝">三局兩勝</option>
+            <option value="五局三勝" selected>五局三勝</option>
+            <option value="七局四勝">七局四勝</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>比賽規則</label>
+          <textarea class="form-control" id="inputRules" rows="8" placeholder="輸入比賽規則說明..."></textarea>
+        </div>
+        <button class="btn btn-primary" id="btnSaveSettings">儲存設定</button>
+      </div>
+    </section>
+
+    <!-- Teams -->
+    <section class="section" id="sec-teams">
+      <div class="section-title"><span class="icon">T</span> 隊伍管理 <span class="badge badge-accent" id="teamCount">0 / 16</span></div>
+      <div class="card">
+        <div class="form-group" style="display:flex;gap:8px;">
+          <input type="text" class="form-control" id="inputTeamName" placeholder="輸入組別名稱" style="flex:1;">
+          <button class="btn btn-primary" id="btnAddTeam">新增</button>
+        </div>
+        <div id="teamList"></div>
+      </div>
+    </section>
+
+    <!-- Bracket Seeding -->
+    <section class="section" id="sec-bracket">
+      <div class="section-title"><span class="icon">B</span> 對戰排序</div>
+      <div class="card">
+        <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:12px;">
+          將 16 組排入對戰位置，或使用隨機抽籤。
+        </p>
+        <div class="btn-group" style="margin-bottom:16px;">
+          <button class="btn btn-warning" id="btnRandomSeed">隨機抽籤</button>
+          <button class="btn btn-success" id="btnSaveBracket">儲存對戰表</button>
+        </div>
+        <div id="seedingContainer"></div>
+      </div>
+    </section>
+
+    <!-- Matches -->
+    <section class="section" id="sec-matches">
+      <div class="section-title"><span class="icon">M</span> 比賽成績</div>
+      <div id="matchesContainer"></div>
+    </section>
+
+    <!-- Share -->
+    <section class="section" id="sec-share">
+      <div class="section-title"><span class="icon">S</span> 分享連結</div>
+      <div class="card">
+        <div class="card-title">觀看連結</div>
+        <div class="share-url-box">
+          <input type="text" class="share-url-input" id="viewUrl" readonly>
+          <button class="btn btn-primary" id="btnCopyView">複製</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">管理連結</div>
+        <div class="share-url-box">
+          <input type="text" class="share-url-input" id="adminUrl" readonly>
+          <button class="btn btn-primary" id="btnCopyAdmin">複製</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">匯出 / 匯入資料</div>
+        <div class="btn-group">
+          <button class="btn btn-outline" id="btnExport">匯出 JSON</button>
+          <button class="btn btn-outline" id="btnImport">匯入 JSON</button>
+        </div>
+        <input type="file" id="fileImport" accept=".json" style="display:none;">
+      </div>
+      <div class="card">
+        <div class="card-title">重置資料</div>
+        <button class="btn btn-danger" id="btnReset">重置所有資料</button>
+      </div>
+      <div class="card">
+        <div class="card-title">載入測試資料</div>
+        <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:12px;">
+          載入 16 組完整測試資料，用於預覽網站效果。
+        </p>
+        <button class="btn btn-warning" id="btnLoadDemo">載入測試資料</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">16強雙打淘汰賽管理系統</div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="js/demo-data.js?v=1"></script>
+  <script src="js/storage.js?v=1"></script>
+  <script src="js/admin.js?v=1"></script>
+</body>
+</html>
