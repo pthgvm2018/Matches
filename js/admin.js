@@ -89,8 +89,8 @@
     data.teams.forEach((team, ti) => {
       html += '<div class="card" style="padding:14px;">';
       html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-      html += '<div class="team-info"><span class="team-number">' + (ti + 1) + '</span><strong>' + esc(team.name) + '</strong></div>';
-      html += '<button class="btn btn-danger btn-sm" data-remove-team="' + team.id + '">刪除隊伍</button>';
+      html += '<div class="team-info"><span class="team-number">' + (ti + 1) + '</span><input type="text" class="form-control" style="width:auto;display:inline-block;font-weight:700;padding:2px 8px;" value="' + esc(team.name) + '" data-team-name="' + team.id + '"></div>';
+      html += '<div style="display:flex;gap:6px;"><button class="btn btn-primary btn-sm" data-save-name="' + team.id + '">儲存名稱</button><button class="btn btn-danger btn-sm" data-remove-team="' + team.id + '">刪除隊伍</button></div>';
       html += '</div>';
       html += '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">選手名單（10 人，每 2 人為一組雙打）：</div>';
       html += '<div class="player-grid">';
@@ -104,6 +104,19 @@
     });
     container.innerHTML = html;
 
+    container.querySelectorAll('[data-save-name]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tid = parseInt(btn.dataset.saveName);
+        const team = data.teams.find(t => t.id === tid);
+        if (!team) return;
+        const inp = container.querySelector('[data-team-name="' + tid + '"]');
+        const newName = inp ? inp.value.trim() : '';
+        if (!newName) { showToast('名稱不能為空'); return; }
+        if (data.teams.some(t => t.id !== tid && t.name === newName)) { showToast('名稱已存在'); return; }
+        team.name = newName;
+        persist(); showToast('隊伍名稱已更新為：' + newName);
+      });
+    });
     container.querySelectorAll('[data-remove-team]').forEach(btn => {
       btn.addEventListener('click', () => removeTeam(parseInt(btn.dataset.removeTeam)));
     });
