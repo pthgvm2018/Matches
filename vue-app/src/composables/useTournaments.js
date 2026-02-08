@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { collection, doc, getDoc, setDoc, deleteDoc, getDocs, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase'
 
-const COLLECTION = 'tournaments_v2'
+const COLLECTION = 'tournaments'
 
 // --- 賽事列表 ---
 export function useTournamentList() {
