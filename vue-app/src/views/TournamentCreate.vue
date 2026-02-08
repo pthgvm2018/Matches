@@ -527,20 +527,6 @@ async function submit() {
 .event-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
 }
-.format-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-}
-.format-option {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 20px 12px; border: 2px solid var(--border); border-radius: var(--radius);
-  background: var(--bg-secondary); cursor: pointer; transition: all 0.2s;
-  text-align: center;
-}
-.format-option:hover { border-color: var(--accent); }
-.format-option.selected { border-color: var(--accent); background: var(--accent-light); }
-.format-icon { font-size: 1.5rem; }
-.format-label { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; }
-.format-desc { font-size: 0.8rem; color: var(--text-secondary); }
 .event-option {
   display: flex; flex-direction: column; gap: 4px;
   padding: 16px; border: 1px solid var(--border); border-radius: var(--radius);
@@ -583,7 +569,6 @@ async function submit() {
 
 @media (max-width: 768px) {
   .event-grid { grid-template-columns: 1fr 1fr; }
-  .format-grid { grid-template-columns: 1fr; }
   .steps-bar { flex-wrap: wrap; }
   .step-label { display: none; }
 }

@@ -54,6 +54,19 @@
         <div class="section-title" style="margin-top:20px;"><span class="icon">S</span> 項目設定</div>
         <div v-for="ev in data.events" :key="ev.id" class="card" style="margin-bottom:12px;">
           <div class="card-title">{{ ev.label }}</div>
+          <!-- 賽制選擇 -->
+          <div class="form-group">
+            <label>賽制</label>
+            <div class="format-grid">
+              <div v-for="f in formatPresets" :key="f.value"
+                   :class="['format-option', { selected: ev.format === f.value }]"
+                   @click="onFormatChange(ev, f.value)">
+                <span class="format-icon">{{ f.icon }}</span>
+                <span class="format-label">{{ f.label }}</span>
+                <span class="format-desc">{{ f.desc }}</span>
+              </div>
+            </div>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label>{{ ev.format === 'group_knockout' ? '小組賽每場比賽' : '每場比賽' }}</label>
@@ -119,7 +132,6 @@
           </template>
 
           <div class="format-info" style="margin-top:8px;">
-            <span class="badge badge-accent">{{ formatLabel(ev.format) }}</span>
             <span v-if="ev.format === 'group_knockout'" class="badge badge-green">小組{{ bestOfLabel(ev.matchBestOf) }}</span>
             <span v-if="ev.format === 'group_knockout'" class="badge badge-green">淘汰{{ bestOfLabel(ev.knockoutBestOf || ev.matchBestOf) }}</span>
             <span v-if="ev.format !== 'group_knockout'" class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
@@ -209,6 +221,20 @@ const rulesText = computed(() => {
 
 const bestOfOpts = BEST_OF_OPTIONS
 const teamFmtOpts = TEAM_MATCH_FORMATS
+const formatPresets = [
+  { value: 'elimination', label: '淘汰賽', desc: '輸一場即淘汰', icon: '🏆' },
+  { value: 'round_robin', label: '循環賽', desc: '每位選手互相對戰', icon: '🔄' },
+  { value: 'group_knockout', label: '分組循環＋淘汰', desc: '先分組循環，再進入淘汰賽', icon: '📊' },
+]
+
+function onFormatChange(ev, newFormat) {
+  if (ev.format === newFormat) return
+  ev.format = newFormat
+  if (newFormat === 'group_knockout' && !ev.knockoutBestOf) {
+    ev.knockoutBestOf = ev.matchBestOf || 5
+  }
+  saveData()
+}
 
 function bestOfLabel(b) {
   return BEST_OF_OPTIONS.find(x => x.value === b)?.label || `${b}局`

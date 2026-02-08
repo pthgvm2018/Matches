@@ -191,6 +191,26 @@ select.form-control { cursor: pointer; }
 .badge-red { background: rgba(239,83,80,0.15); color: var(--red); }
 .badge-yellow { background: rgba(255,193,7,0.15); color: var(--yellow); }
 
+/* ===== Format Grid (賽制選擇卡片) ===== */
+.format-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+.format-option {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 16px 10px; border: 2px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-secondary); cursor: pointer; transition: all 0.2s;
+  text-align: center;
+}
+.format-option:hover { border-color: var(--accent); }
+.format-option.selected { border-color: var(--accent); background: var(--accent-light); }
+.format-icon { font-size: 1.3rem; }
+.format-label { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
+.format-desc { font-size: 0.75rem; color: var(--text-secondary); }
+
+@media (max-width: 768px) {
+  .format-grid { grid-template-columns: 1fr; }
+}
+
 /* ===== Admin Mode Banner ===== */
 .admin-banner {
   background: linear-gradient(90deg, var(--orange), #ff8a50);
