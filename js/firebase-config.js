@@ -1,13 +1,9 @@
 // ===== Firebase 設定 =====
-// 請到 Firebase Console (https://console.firebase.google.com/) 建立專案後，
-// 將下方 YOUR_... 替換為你的 Firebase 專案設定值。
-// 如果尚未設定，系統會自動使用 localStorage（原有行為不受影響）。
-
 var FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAcmNHb3nQ7FeAtPy4-au6njguMXaWQn3c",
+  authDomain: "pingpong-tournament-69d36.firebaseapp.com",
+  projectId: "pingpong-tournament-69d36",
+  storageBucket: "pingpong-tournament-69d36.firebasestorage.app",
+  messagingSenderId: "652014324361",
+  appId: "1:652014324361:web:8bec477c29722ee1f6d458"
 };
