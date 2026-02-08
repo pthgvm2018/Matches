@@ -575,5 +575,9 @@
 
   function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  function startApp() {
+    if (window._firestoreReady) { window._firestoreReady.then(init); }
+    else { init(); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startApp); else startApp();
 })();
