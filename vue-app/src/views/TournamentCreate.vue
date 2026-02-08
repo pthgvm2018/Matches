@@ -434,7 +434,7 @@ function buildTournament() {
     delete clean.participantText
     delete clean.presetKey
     delete clean.numGroups
-    delete clean.advancePerGroup
+    // 注意：advancePerGroup 由 generateEventMatches 設定，不可刪除
     delete clean.customRubberCount
     delete clean.customRubbers
     t.events.push(clean)

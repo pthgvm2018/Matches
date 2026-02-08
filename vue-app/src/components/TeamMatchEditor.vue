@@ -123,9 +123,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update'])
 
-const rubbers = ref(initRubbers())
-
-// 找到 p1, p2 的球員名單
+// 找到 p1, p2 的球員名單（必須在 initRubbers 之前定義，因為 parseIndices 會存取）
 const team1Data = computed(() => props.participants.find(p => p.id === props.match.p1?.id))
 const team2Data = computed(() => props.participants.find(p => p.id === props.match.p2?.id))
 const team1Players = computed(() => team1Data.value?.players || [])
@@ -133,6 +131,8 @@ const team2Players = computed(() => team2Data.value?.players || [])
 const hasPlayerRosters = computed(() =>
   team1Players.value.length > 0 && team1Players.value.some(p => p)
 )
+
+const rubbers = ref(initRubbers())
 
 function initRubbers() {
   const results = props.match.rubberResults || []
