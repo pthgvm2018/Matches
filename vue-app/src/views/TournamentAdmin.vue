@@ -297,19 +297,42 @@ function ensureTeamPlayers(ev) {
 // 每次資料載入或更新後，確保團體賽有 rubberResults 和 players
 function applyTeamMigrations() {
   if (!data.value || !data.value.events) return
+  let needsSave = false
   for (const ev of data.value.events) {
     if (ev.type === 'team') {
+      // 檢查是否需要遷移
+      const hadRubbers = ev.rubbers && ev.rubbers.length > 0
       attachRubbersToEvent(ev)
       ensureTeamPlayers(ev)
+      // 如果之前沒有 rubbers 模板，代表是第一次遷移
+      if (!hadRubbers) needsSave = true
+      // 檢查比賽是否缺少 rubberResults
+      const matches = getAllMatches(ev)
+      if (matches.some(m => !m.isBye && m.p1 && m.p2 && !m.rubberResults)) {
+        needsSave = true
+      }
     }
   }
+  return needsSave
+}
+
+function getAllMatches(ev) {
+  const all = []
+  for (const g of (ev.groups || [])) all.push(...(g.matches || []))
+  all.push(...(ev.roundRobinMatches || []))
+  for (const r of (ev.bracket?.rounds || [])) all.push(...(r.matches || []))
+  return all
 }
 
 onMounted(async () => {
   await load()
   if (data.value && data.value.events.length > 0) {
-    applyTeamMigrations()
+    const needsSave = applyTeamMigrations()
     activeTab.value = data.value.events[0].id
+    // 遷移後儲存到 Firestore，確保 rubberResults 永久存在
+    if (needsSave) {
+      await saveData()
+    }
   }
   listen(applyTeamMigrations)
 })
