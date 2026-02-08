@@ -1,9 +1,15 @@
 <template>
-  <div class="app-nav" v-if="showAppNav">
-    <router-link to="/">主站觀看</router-link>
-    <router-link to="/admin">主站管理</router-link>
-    <router-link to="/knockout16">16強觀看</router-link>
-    <router-link to="/knockout16/admin">16強管理</router-link>
+  <div class="app-nav">
+    <template v-if="isAdmin">
+      <router-link to="/admin">主站管理</router-link>
+      <router-link to="/admin/knockout16">16強管理</router-link>
+      <router-link to="/" class="switch-link">← 觀看模式</router-link>
+    </template>
+    <template v-else>
+      <router-link to="/">主站</router-link>
+      <router-link to="/knockout16">16強</router-link>
+      <router-link to="/admin" class="switch-link">管理模式 →</router-link>
+    </template>
   </div>
   <router-view />
   <SyncStatus />
@@ -17,13 +23,14 @@ import SyncStatus from './components/SyncStatus.vue'
 import ToastNotification from './components/ToastNotification.vue'
 
 const route = useRoute()
-const showAppNav = computed(() => true)
+const isAdmin = computed(() => route.meta.section === 'admin')
 </script>
 
 <style>
 .app-nav {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 0;
   background: #0d1440;
   border-bottom: 1px solid #233554;
@@ -41,5 +48,14 @@ const showAppNav = computed(() => true)
   color: #00b4d8;
   border-bottom-color: #00b4d8;
   background: rgba(0, 180, 216, 0.1);
+}
+.app-nav a.switch-link {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #4a5568;
+  border-bottom: none;
+}
+.app-nav a.switch-link:hover {
+  color: #00b4d8;
 }
 </style>

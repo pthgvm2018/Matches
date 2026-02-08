@@ -484,7 +484,7 @@ const viewUrl = computed(() => {
   return base
 })
 const adminUrl = computed(() => {
-  const base = window.location.origin + '/Matches/#/knockout16/admin'
+  const base = window.location.origin + '/Matches/#/admin/knockout16'
   return base
 })
 
