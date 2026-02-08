@@ -367,6 +367,125 @@ export function generateEventMatches(event, config = {}) {
   return event
 }
 
+// ===== 模擬賽事結果 =====
+
+// 產生一局擬真桌球比分 (11分制, deuce 需贏兩分)
+function simulateGameScore(pWin = 0.55) {
+  // pWin: p1 每球得分機率
+  let a = 0, b = 0
+  while (true) {
+    if (a >= 11 && a - b >= 2) return { a, b }
+    if (b >= 11 && b - a >= 2) return { a, b }
+    if (a >= 10 && b >= 10) {
+      // deuce
+      if (Math.random() < pWin) a++; else b++
+    } else {
+      if (Math.random() < pWin) a++; else b++
+    }
+  }
+}
+
+// 根據種子差距計算 p1 勝率
+function seedWinProb(p1, p2) {
+  const s1 = p1?.seed || 50
+  const s2 = p2?.seed || 50
+  // 種子越小越強，差距轉換為勝率 0.35 ~ 0.65
+  const diff = s2 - s1 // 正值 = p1 種子較優
+  return 0.5 + Math.min(Math.max(diff * 0.02, -0.15), 0.15)
+}
+
+// 模擬一場比賽 (bestOf 局)
+function simulateMatch(match, bestOf) {
+  if (!match.p1 || !match.p2) return
+  if (match.isBye) return
+
+  const pWin = seedWinProb(match.p1, match.p2)
+  const toWin = Math.ceil(bestOf / 2)
+  let w1 = 0, w2 = 0
+  const scores = []
+
+  while (w1 < toWin && w2 < toWin) {
+    // 每局勝率加點隨機波動
+    const gamePWin = pWin + (Math.random() - 0.5) * 0.2
+    const game = simulateGameScore(Math.min(Math.max(gamePWin, 0.3), 0.7))
+    scores.push(game)
+    if (game.a > game.b) w1++; else w2++
+  }
+
+  match.scores = scores
+  match.winner = w1 > w2 ? match.p1 : match.p2
+}
+
+// 模擬循環賽
+function simulateRoundRobinMatches(matches, bestOf) {
+  for (const m of matches) {
+    simulateMatch(m, bestOf)
+  }
+}
+
+// 模擬淘汰賽 (含自動晉級傳播)
+function simulateEliminationRounds(rounds, bestOf) {
+  for (let r = 0; r < rounds.length; r++) {
+    const curMatches = rounds[r].matches
+    for (let i = 0; i < curMatches.length; i++) {
+      const match = curMatches[i]
+      if (match.isBye) {
+        // bye 已經有 winner，直接晉級
+      } else if (match.p1 && match.p2) {
+        simulateMatch(match, bestOf)
+      }
+      // 傳播勝者到下一輪
+      if (match.winner && r < rounds.length - 1) {
+        const nextIdx = Math.floor(i / 2)
+        const nextMatch = rounds[r + 1].matches[nextIdx]
+        if (i % 2 === 0) nextMatch.p1 = match.winner
+        else nextMatch.p2 = match.winner
+      }
+    }
+  }
+}
+
+// 模擬整個項目
+export function simulateEvent(event) {
+  const bestOf = event.matchBestOf || 5
+
+  if (event.format === 'round_robin') {
+    simulateRoundRobinMatches(event.roundRobinMatches || [], bestOf)
+
+  } else if (event.format === 'elimination') {
+    if (event.bracket?.rounds) {
+      simulateEliminationRounds(event.bracket.rounds, bestOf)
+    }
+
+  } else if (event.format === 'group_knockout') {
+    // 1. 模擬各組循環賽
+    for (const group of (event.groups || [])) {
+      simulateRoundRobinMatches(group.matches, bestOf)
+    }
+
+    // 2. 晉級：各組前 N 名進入淘汰賽
+    const promoted = []
+    for (const group of (event.groups || [])) {
+      const standings = calculateRoundRobinStandings(group.participants, group.matches)
+      const advance = event.advancePerGroup || 2
+      for (let i = 0; i < advance && i < standings.length; i++) {
+        promoted.push({
+          ...standings[i].participant,
+          seed: promoted.length + 1,
+        })
+      }
+    }
+
+    // 3. 用實際晉級者重新產生淘汰賽並模擬
+    if (promoted.length >= 2) {
+      event.bracket = generateBracket(promoted)
+      simulateEliminationRounds(event.bracket.rounds, bestOf)
+    }
+  }
+
+  return event
+}
+
 // ===== 比分計算 =====
 
 // scores: [{a:11,b:5}, {a:9,b:11}, ...]

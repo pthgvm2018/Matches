@@ -191,6 +191,9 @@
       <button v-if="step < 3" class="btn btn-primary" @click="nextStep" :disabled="!canNext">
         下一步
       </button>
+      <button v-if="step === 3" class="btn btn-warning" @click="submitSimulated" :disabled="submitting">
+        {{ submitting ? '建立中...' : '模擬賽事結果' }}
+      </button>
       <button v-if="step === 3" class="btn btn-success" @click="submit" :disabled="submitting">
         {{ submitting ? '建立中...' : '建立賽事' }}
       </button>
@@ -203,7 +206,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   FORMATS, BEST_OF_OPTIONS, TEAM_MATCH_FORMATS, TEAM_RUBBER_TEMPLATES,
-  createTournament, createEvent, generateEventMatches,
+  createTournament, createEvent, generateEventMatches, simulateEvent,
   bracketSize, byeCount, suggestGroups, uid, makeEventLabel,
 } from '../lib/tournament.js'
 import { createTournamentDoc } from '../composables/useTournaments.js'
@@ -341,41 +344,58 @@ function nextStep() {
   step.value++
 }
 
+// Submit with simulation
+async function submitSimulated() {
+  submitting.value = true
+  try {
+    const t = buildTournament()
+    for (const ev of t.events) {
+      simulateEvent(ev)
+    }
+    await createTournamentDoc(t)
+    router.push(`/admin/t/${t.id}`)
+  } catch (e) {
+    console.error('模擬建立失敗:', e)
+    alert('模擬建立失敗：' + e.message)
+  } finally {
+    submitting.value = false
+  }
+}
+
+// Build tournament object from form data
+function buildTournament() {
+  const t = createTournament(form.name, form.date, form.venue)
+
+  for (const ev of events.value) {
+    const config = {}
+    if (ev.format === 'group_knockout') {
+      config.numGroups = ev.numGroups
+      config.advancePerGroup = ev.advancePerGroup
+    }
+    if (ev.type === 'team' && ev.teamMatchFormat === 'custom') {
+      ev.rubbers = ev.customRubbers.map((r, i) => ({
+        order: i + 1, type: r.type, label: r.label,
+      }))
+    }
+    generateEventMatches(ev, config)
+
+    const clean = { ...ev }
+    delete clean.participantText
+    delete clean.presetKey
+    delete clean.numGroups
+    delete clean.advancePerGroup
+    delete clean.customRubberCount
+    delete clean.customRubbers
+    t.events.push(clean)
+  }
+  return t
+}
+
 // Submit
 async function submit() {
   submitting.value = true
   try {
-    const t = createTournament(form.name, form.date, form.venue)
-
-    for (const ev of events.value) {
-      // 產生比賽結構
-      const config = {}
-      if (ev.format === 'group_knockout') {
-        config.numGroups = ev.numGroups
-        config.advancePerGroup = ev.advancePerGroup
-      }
-
-      // 處理團體自訂場次
-      if (ev.type === 'team' && ev.teamMatchFormat === 'custom') {
-        ev.rubbers = ev.customRubbers.map((r, i) => ({
-          order: i + 1, type: r.type, label: r.label,
-        }))
-      }
-
-      generateEventMatches(ev, config)
-
-      // 清理暫存欄位
-      const clean = { ...ev }
-      delete clean.participantText
-      delete clean.presetKey
-      delete clean.numGroups
-      delete clean.advancePerGroup
-      delete clean.customRubberCount
-      delete clean.customRubbers
-
-      t.events.push(clean)
-    }
-
+    const t = buildTournament()
     await createTournamentDoc(t)
     router.push(`/t/${t.id}`)
   } catch (e) {
