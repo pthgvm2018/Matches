@@ -13,8 +13,9 @@
     <div v-if="step === 0" class="card">
       <div class="card-title">基本資訊</div>
       <div class="form-group">
-        <label>賽事名稱</label>
-        <input class="form-control" v-model="form.name" placeholder="例：2026 潮州乒乓球邀請賽">
+        <label>賽事名稱 <span class="required">*必填</span></label>
+        <input class="form-control" v-model="form.name" placeholder="例：2026 潮州乒乓球邀請賽"
+               :class="{ 'input-error': step === 0 && !form.name.trim() && touched }">
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -218,6 +219,7 @@ const teamFormats = TEAM_MATCH_FORMATS
 
 // Step 0
 const form = reactive({ name: '', date: '', venue: '' })
+const touched = ref(false)
 
 // Step 1
 const eventPresets = [
@@ -333,7 +335,9 @@ const canNext = computed(() => {
 })
 
 function nextStep() {
+  touched.value = true
   if (!canNext.value) return
+  touched.value = false
   step.value++
 }
 
@@ -440,6 +444,12 @@ async function submit() {
 .confirm-event:last-child { border-bottom: none; }
 .confirm-event-title { font-weight: 600; color: var(--accent); margin-bottom: 6px; }
 .confirm-details { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.required { color: var(--red); font-size: 0.8rem; font-weight: 400; }
+.input-error { border-color: var(--red) !important; }
+.btn:disabled {
+  opacity: 0.4; cursor: not-allowed; transform: none !important;
+}
 
 @media (max-width: 768px) {
   .event-grid { grid-template-columns: 1fr 1fr; }
