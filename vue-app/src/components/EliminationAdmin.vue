@@ -1,21 +1,21 @@
 <template>
   <div>
-    <div class="section-title"><span class="icon">T</span>{{ event.label }} - 淘汰賽管理</div>
+    <div v-if="!embedded" class="section-title"><span class="icon">T</span>{{ event.label }} - 淘汰賽管理</div>
 
-    <div v-if="isTeam" class="sub-nav">
+    <div v-if="isTeam && !embedded" class="sub-nav">
       <button :class="{ active: tab === 'teams' }" @click="tab = 'teams'">隊伍管理</button>
       <button :class="{ active: tab === 'matches' }" @click="tab = 'matches'">比賽管理</button>
     </div>
 
-    <!-- 隊伍管理 -->
-    <div v-if="isTeam && tab === 'teams'" class="card">
+    <!-- 隊伍管理（僅獨立使用時顯示，嵌入時由父元件處理） -->
+    <div v-if="isTeam && !embedded && tab === 'teams'" class="card">
       <div class="card-title">隊伍管理 <span class="badge badge-accent">{{ allParticipants.length }} 隊</span></div>
       <TeamRosterEditor v-for="(p, i) in allParticipants" :key="p.id"
         :participant="p" :index="i" :teamSize="event.teamSize || 10"
         @update="$emit('save')" />
     </div>
 
-    <template v-if="!isTeam || tab === 'matches'">
+    <template v-if="!isTeam || embedded || tab === 'matches'">
       <!-- 籤表（查看用） -->
       <EliminationView :event="event" />
 
@@ -58,7 +58,7 @@ import TeamMatchEditor from './TeamMatchEditor.vue'
 import TeamRosterEditor from './TeamRosterEditor.vue'
 import { setBracketWinner } from '../lib/tournament.js'
 
-const props = defineProps({ event: Object })
+const props = defineProps({ event: Object, embedded: { type: Boolean, default: false } })
 const isTeam = computed(() => props.event.type === 'team')
 const emit = defineEmits(['save'])
 const tab = ref('matches')

@@ -108,7 +108,7 @@
 
     <!-- 淘汰賽管理 -->
     <div v-if="tab === 'knockout'">
-      <EliminationAdmin :event="knockoutEvent" @save="$emit('save')" />
+      <EliminationAdmin :event="knockoutEvent" :embedded="true" @save="$emit('save')" />
     </div>
   </div>
 </template>
