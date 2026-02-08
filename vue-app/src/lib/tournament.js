@@ -89,13 +89,19 @@ export function byeCount(n) {
 }
 
 export function seedOrder(size) {
-  if (size === 1) return [0]
-  const half = seedOrder(size / 2)
-  return half.reduce((acc, pos) => {
-    acc.push(pos * 2)
-    acc.push(pos * 2 + 1)
-    return acc
-  }, [])
+  if (size <= 1) return [0]
+  // 標準淘汰賽種子排序：種子1和種子2在對角端（決賽碰面），BYE均勻分散
+  let order = [0, 1]
+  while (order.length < size) {
+    const n = order.length
+    const next = new Array(n * 2)
+    for (let i = 0; i < n; i++) {
+      next[i] = order[i] * 2
+      next[n * 2 - 1 - i] = order[i] * 2 + 1
+    }
+    order = next
+  }
+  return order
 }
 
 // 產生淘汰賽賽程
