@@ -29,35 +29,47 @@
       </div>
     </div>
 
-    <!-- Step 1: 選擇項目 -->
-    <div v-if="step === 1" class="card">
-      <div class="card-title">選擇比賽項目</div>
-      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">
-        勾選本次賽事要舉辦的項目（可多選）
-      </p>
-      <div class="event-grid">
-        <label v-for="preset in eventPresets" :key="preset.key"
-               :class="['event-option', { selected: selectedEvents.has(preset.key) }]">
-          <input type="checkbox" :value="preset.key"
-                 :checked="selectedEvents.has(preset.key)"
-                 @change="toggleEvent(preset.key)">
-          <span class="event-label">{{ preset.label }}</span>
-          <span class="event-desc">{{ preset.desc }}</span>
-        </label>
+    <!-- Step 1: 選擇項目與賽制 -->
+    <div v-if="step === 1">
+      <div class="card">
+        <div class="card-title">選擇比賽項目</div>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">
+          勾選本次賽事要舉辦的項目（可多選）
+        </p>
+        <div class="event-grid">
+          <label v-for="preset in eventPresets" :key="preset.key"
+                 :class="['event-option', { selected: selectedEvents.has(preset.key) }]">
+            <input type="checkbox" :value="preset.key"
+                   :checked="selectedEvents.has(preset.key)"
+                   @change="toggleEvent(preset.key)">
+            <span class="event-label">{{ preset.label }}</span>
+            <span class="event-desc">{{ preset.desc }}</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div class="card-title">選擇賽制</div>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">
+          所有項目採用相同賽制（建立後可個別調整）
+        </p>
+        <div class="format-grid">
+          <div v-for="f in formatPresets" :key="f.value"
+               :class="['format-option', { selected: selectedFormat === f.value }]"
+               @click="selectedFormat = f.value">
+            <span class="format-icon">{{ f.icon }}</span>
+            <span class="format-label">{{ f.label }}</span>
+            <span class="format-desc">{{ f.desc }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Step 2: 各項目設定 -->
     <div v-if="step === 2">
       <div v-for="(ev, idx) in events" :key="ev.id" class="card" style="margin-bottom:16px;">
-        <div class="card-title">{{ ev.label }}</div>
-
-        <!-- 賽制 -->
-        <div class="form-group">
-          <label>賽制</label>
-          <select class="form-control" v-model="ev.format">
-            <option v-for="f in formats" :key="f.value" :value="f.value">{{ f.label }}</option>
-          </select>
+        <div class="card-title">{{ ev.label }}
+          <span class="badge badge-accent" style="margin-left:8px;">{{ formatLabel(ev.format) }}</span>
         </div>
 
         <!-- 每場局制 -->
@@ -235,6 +247,12 @@ const form = reactive({ name: '', date: '', venue: '' })
 const touched = ref(false)
 
 // Step 1
+const selectedFormat = ref('elimination')
+const formatPresets = [
+  { value: 'elimination', label: '淘汰賽', desc: '輸一場即淘汰', icon: '🏆' },
+  { value: 'round_robin', label: '循環賽', desc: '每位選手互相對戰', icon: '🔄' },
+  { value: 'group_knockout', label: '分組循環＋淘汰', desc: '先分組循環，再進入淘汰賽', icon: '📊' },
+]
 const eventPresets = [
   { key: 'ms', label: '男子單打', desc: '男子 1v1', type: 'singles', gender: 'male' },
   { key: 'ws', label: '女子單打', desc: '女子 1v1', type: 'singles', gender: 'female' },
@@ -267,15 +285,23 @@ function buildEvents() {
   for (const preset of eventPresets) {
     if (!selectedEvents.has(preset.key)) continue
     if (existing.has(preset.key)) {
-      result.push(existing.get(preset.key))
+      // 更新既有 event 的 format 為最新選擇
+      const ev = existing.get(preset.key)
+      ev.format = selectedFormat.value
+      if (selectedFormat.value === 'group_knockout' && !ev.knockoutBestOf) {
+        ev.knockoutBestOf = ev.matchBestOf || 5
+      }
+      result.push(ev)
     } else {
+      const fmt = selectedFormat.value
       const defaultTeamSize = preset.type === 'team' ? 10 : undefined
       const ev = reactive({
         ...createEvent({
           type: preset.type,
           gender: preset.gender,
-          format: 'elimination',
+          format: fmt,
           matchBestOf: 5,
+          knockoutBestOf: fmt === 'group_knockout' ? 5 : undefined,
           teamSize: defaultTeamSize,
           teamMatchFormat: preset.type === 'team' ? 'swaythling' : undefined,
         }),
@@ -402,7 +428,7 @@ function bestOfLabel(b) { return BEST_OF_OPTIONS.find(x => x.value === b)?.label
 // Navigation
 const canNext = computed(() => {
   if (step.value === 0) return form.name.trim().length > 0
-  if (step.value === 1) return selectedEvents.size > 0
+  if (step.value === 1) return selectedEvents.size > 0 && !!selectedFormat.value
   if (step.value === 2) return events.value.every(e => e.participants.length >= 2)
   return true
 })
@@ -501,6 +527,20 @@ async function submit() {
 .event-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
 }
+.format-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+.format-option {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 20px 12px; border: 2px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-secondary); cursor: pointer; transition: all 0.2s;
+  text-align: center;
+}
+.format-option:hover { border-color: var(--accent); }
+.format-option.selected { border-color: var(--accent); background: var(--accent-light); }
+.format-icon { font-size: 1.5rem; }
+.format-label { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; }
+.format-desc { font-size: 0.8rem; color: var(--text-secondary); }
 .event-option {
   display: flex; flex-direction: column; gap: 4px;
   padding: 16px; border: 1px solid var(--border); border-radius: var(--radius);
@@ -543,6 +583,7 @@ async function submit() {
 
 @media (max-width: 768px) {
   .event-grid { grid-template-columns: 1fr 1fr; }
+  .format-grid { grid-template-columns: 1fr; }
   .steps-bar { flex-wrap: wrap; }
   .step-label { display: none; }
 }
