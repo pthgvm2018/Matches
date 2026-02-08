@@ -68,11 +68,39 @@
               </select>
             </div>
           </div>
-          <div class="format-info">
+          <!-- 自訂場次編輯 -->
+          <template v-if="ev.type === 'team' && ev.teamMatchFormat === 'custom'">
+            <div class="form-row" style="margin-top:12px;">
+              <div class="form-group">
+                <label>總點數</label>
+                <input class="form-control" type="number" min="1" max="15"
+                       :value="ev.rubbers?.length || 5"
+                       @change="onCustomRubberCountChange(ev, $event)">
+              </div>
+              <div class="form-group">
+                <label>勝點數</label>
+                <input class="form-control" type="number" min="1"
+                       v-model.number="ev.pointsToWin" @change="saveData">
+              </div>
+            </div>
+            <div v-for="(r, ri) in (ev.rubbers || [])" :key="ri"
+                 style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.85rem;">
+              <span style="min-width:50px;color:var(--text-muted);">第{{ ri + 1 }}點</span>
+              <select class="form-control" style="width:auto;" v-model="r.type" @change="onCustomRubberEdit(ev)">
+                <option value="singles">單打</option>
+                <option value="doubles">雙打</option>
+                <option value="mixed_doubles">混雙</option>
+              </select>
+              <input class="form-control" style="flex:1;" v-model="r.label"
+                     :placeholder="`第${ri+1}點`" @change="onCustomRubberEdit(ev)">
+            </div>
+          </template>
+
+          <div class="format-info" style="margin-top:8px;">
             <span class="badge badge-accent">{{ formatLabel(ev.format) }}</span>
             <span class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
             <span v-if="ev.type === 'team'" class="badge badge-yellow">
-              {{ getTeamFormatDesc(ev.teamMatchFormat) }}
+              {{ ev.teamMatchFormat === 'custom' ? (ev.rubbers?.length || 0) + '點' + (ev.pointsToWin || 3) + '勝' : getTeamFormatDesc(ev.teamMatchFormat) }}
             </span>
           </div>
         </div>
@@ -173,13 +201,56 @@ function onTeamFormatChange(ev) {
   if (ev.teamMatchFormat && ev.teamMatchFormat !== 'custom') {
     const tmpl = TEAM_RUBBER_TEMPLATES[ev.teamMatchFormat]
     if (tmpl) {
-      ev.rubbers = tmpl.rubbers
+      ev.rubbers = tmpl.rubbers.map(r => ({ ...r }))
       ev.pointsToWin = tmpl.pointsToWin
-      // 重新為所有比賽附加 rubberResults
-      attachRubbersToEvent(ev)
+    }
+  } else if (ev.teamMatchFormat === 'custom') {
+    // 初始化自訂場次（如果還沒有的話）
+    if (!ev.rubbers || !ev.rubbers.length) {
+      ev.rubbers = Array.from({ length: 5 }, (_, i) => ({
+        order: i + 1, type: 'singles', label: `第${i + 1}點`,
+      }))
+      ev.pointsToWin = 3
     }
   }
+  // 清除舊的 rubberResults 讓 attachRubbersToEvent 重新產生
+  clearRubberResults(ev)
+  attachRubbersToEvent(ev)
   saveData()
+}
+
+function onCustomRubberCountChange(ev, event) {
+  const count = parseInt(event.target.value) || 5
+  if (!ev.rubbers) ev.rubbers = []
+  while (ev.rubbers.length < count) {
+    ev.rubbers.push({ order: ev.rubbers.length + 1, type: 'singles', label: `第${ev.rubbers.length + 1}點` })
+  }
+  while (ev.rubbers.length > count) {
+    ev.rubbers.pop()
+  }
+  clearRubberResults(ev)
+  attachRubbersToEvent(ev)
+  saveData()
+}
+
+function onCustomRubberEdit(ev) {
+  clearRubberResults(ev)
+  attachRubbersToEvent(ev)
+  saveData()
+}
+
+function clearRubberResults(ev) {
+  const clearMatches = (matches) => {
+    for (const m of (matches || [])) {
+      delete m.rubberResults
+      delete m.teamScore
+    }
+  }
+  for (const g of (ev.groups || [])) clearMatches(g.matches)
+  clearMatches(ev.roundRobinMatches)
+  if (ev.bracket?.rounds) {
+    for (const r of ev.bracket.rounds) clearMatches(r.matches)
+  }
 }
 
 const viewUrl = computed(() => `${window.location.origin}/Matches/#/t/${tid}`)
