@@ -350,13 +350,16 @@ export function attachRubbersToEvent(event) {
 // ===== 建立空白賽事 =====
 
 export function createEvent(config) {
-  const { type, gender, format, matchBestOf, teamSize, teamMatchFormat, teamBestOf, customRubbers } = config
+  const { type, gender, format, matchBestOf, knockoutBestOf, teamSize, teamMatchFormat, teamBestOf, customRubbers } = config
   const event = {
     id: uid(), type, gender,
     label: makeEventLabel(gender, type),
     format, matchBestOf: matchBestOf || 5,
     participants: [],
     groups: null, bracket: null, roundRobinMatches: null, advancePerGroup: null,
+  }
+  if (format === 'group_knockout') {
+    event.knockoutBestOf = knockoutBestOf || matchBestOf || 5
   }
   if (type === 'team') {
     event.teamSize = teamSize || 3
@@ -665,7 +668,8 @@ export function simulateEvent(event) {
     // 3. 用實際晉級者重新產生淘汰賽並模擬
     if (promoted.length >= 2) {
       event.bracket = generateBracket(promoted)
-      simulateEliminationRounds(event.bracket.rounds, bestOf, isTeam, event)
+      const knockoutBestOf = event.knockoutBestOf || bestOf
+      simulateEliminationRounds(event.bracket.rounds, knockoutBestOf, isTeam, event)
     }
   }
 
@@ -750,10 +754,17 @@ export function generateRulesText(tournament) {
     const unit = ev.type === 'team' ? '隊' : '人'
     const typeLabel = EVENT_TYPES.find(x => x.value === ev.type)?.label || ''
 
+    let ruleNum = 1
     lines.push(`${numLabel}、${ev.label}`)
-    lines.push(`1. 共 ${pCount} ${unit}參賽，賽制：${formatLabel}。`)
-    lines.push(`2. 每場比賽採${bestOfLabel}制。`)
-    lines.push(`3. 每局 11 分，10 平後須連贏 2 分。`)
+    lines.push(`${ruleNum++}. 共 ${pCount} ${unit}參賽，賽制：${formatLabel}。`)
+    if (ev.format === 'group_knockout' && ev.knockoutBestOf && ev.knockoutBestOf !== ev.matchBestOf) {
+      lines.push(`${ruleNum++}. 小組賽每場比賽採${bestOfLabel}制。`)
+      const koBestOfLabel = BEST_OF_OPTIONS.find(x => x.value === ev.knockoutBestOf)?.label || `${ev.knockoutBestOf}局`
+      lines.push(`${ruleNum++}. 淘汰賽每場比賽採${koBestOfLabel}制。`)
+    } else {
+      lines.push(`${ruleNum++}. 每場比賽採${bestOfLabel}制。`)
+    }
+    lines.push(`${ruleNum++}. 每局 11 分，10 平後須連贏 2 分。`)
 
     if (ev.type === 'team') {
       const rubbers = ev.rubbers || []
@@ -763,12 +774,12 @@ export function generateRulesText(tournament) {
       })
       const ptw = ev.pointsToWin || 3
       const totalPts = rubbers.length
-      lines.push(`4. 團體賽採 ${totalPts} 點 ${ptw} 勝制。`)
+      lines.push(`${ruleNum++}. 團體賽採 ${totalPts} 點 ${ptw} 勝制。`)
       const typeSet = [...new Set(rubberTypes)]
       if (typeSet.length === 1) {
-        lines.push(`5. 每點為${typeSet[0]}，採${bestOfLabel}制。`)
+        lines.push(`${ruleNum++}. 每點為${typeSet[0]}，採${bestOfLabel}制。`)
       } else {
-        lines.push(`5. 各點內容：${rubbers.map(r => r.label).join('、')}。`)
+        lines.push(`${ruleNum++}. 各點內容：${rubbers.map(r => r.label).join('、')}。`)
       }
     }
 
@@ -776,10 +787,10 @@ export function generateRulesText(tournament) {
       const nGroups = ev.groups?.length || 0
       const adv = ev.advancePerGroup || 2
       const groupNames = (ev.groups || []).map(g => g.name).join('、')
-      lines.push(`${ev.type === 'team' ? '6' : '4'}. ${pCount} ${unit}分為 ${groupNames} 共 ${nGroups} 組。`)
-      lines.push(`${ev.type === 'team' ? '7' : '5'}. 採組內單循環賽制，各組前 ${adv} 名晉級淘汰賽。`)
-      lines.push(`${ev.type === 'team' ? '8' : '6'}. 積分規則：勝場得 2 分，負場得 1 分。`)
-      lines.push(`${ev.type === 'team' ? '9' : '7'}. 若積分相同，依序比較：勝負關係 → ${ev.type === 'team' ? '點差 → ' : ''}局差 → 小分差。`)
+      lines.push(`${ruleNum++}. ${pCount} ${unit}分為 ${groupNames} 共 ${nGroups} 組。`)
+      lines.push(`${ruleNum++}. 採組內單循環賽制，各組前 ${adv} 名晉級淘汰賽。`)
+      lines.push(`${ruleNum++}. 積分規則：勝場得 2 分，負場得 1 分。`)
+      lines.push(`${ruleNum++}. 若積分相同，依序比較：勝負關係 → ${ev.type === 'team' ? '點差 → ' : ''}局差 → 小分差。`)
     }
 
     lines.push('')

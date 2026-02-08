@@ -218,6 +218,7 @@ const knockoutEvent = computed(() => ({
   ...props.event,
   format: 'elimination',
   label: props.event.label,
+  matchBestOf: props.event.knockoutBestOf || props.event.matchBestOf,
 }))
 </script>
 

@@ -61,11 +61,19 @@
         </div>
 
         <!-- 每場局制 -->
-        <div class="form-group">
-          <label>每場比賽</label>
-          <select class="form-control" v-model="ev.matchBestOf">
-            <option v-for="b in bestOfOptions" :key="b.value" :value="b.value">{{ b.label }}</option>
-          </select>
+        <div class="form-row">
+          <div class="form-group">
+            <label>{{ ev.format === 'group_knockout' ? '小組賽每場比賽' : '每場比賽' }}</label>
+            <select class="form-control" v-model="ev.matchBestOf">
+              <option v-for="b in bestOfOptions" :key="b.value" :value="b.value">{{ b.label }}</option>
+            </select>
+          </div>
+          <div class="form-group" v-if="ev.format === 'group_knockout'">
+            <label>淘汰賽每場比賽</label>
+            <select class="form-control" v-model="ev.knockoutBestOf">
+              <option v-for="b in bestOfOptions" :key="b.value" :value="b.value">{{ b.label }}</option>
+            </select>
+          </div>
         </div>
 
         <!-- 參賽者 -->
@@ -174,7 +182,9 @@
         <div class="confirm-event-title">{{ ev.label }}</div>
         <div class="confirm-details">
           <span class="badge badge-accent">{{ formatLabel(ev.format) }}</span>
-          <span class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
+          <span v-if="ev.format === 'group_knockout'" class="badge badge-green">小組{{ bestOfLabel(ev.matchBestOf) }}</span>
+          <span v-if="ev.format === 'group_knockout'" class="badge badge-green">淘汰{{ bestOfLabel(ev.knockoutBestOf || ev.matchBestOf) }}</span>
+          <span v-if="ev.format !== 'group_knockout'" class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
           <span class="badge badge-yellow">{{ ev.participants.length }} {{ ev.type === 'team' ? '隊' : '人' }}</span>
           <span v-if="ev.type === 'team'" class="badge badge-accent">每隊 {{ ev.teamSize }} 人</span>
         </div>
@@ -344,6 +354,15 @@ function parseParticipants(ev) {
     ev.advancePerGroup = s.advance
   }
 }
+
+// 當格式改為 group_knockout 時，自動初始化 knockoutBestOf
+watch(() => events.value.map(e => e.format), () => {
+  for (const ev of events.value) {
+    if (ev.format === 'group_knockout' && !ev.knockoutBestOf) {
+      ev.knockoutBestOf = ev.matchBestOf || 5
+    }
+  }
+}, { deep: true })
 
 // 監聽自訂場次數量變化
 watch(() => events.value.map(e => e.customRubberCount), () => {

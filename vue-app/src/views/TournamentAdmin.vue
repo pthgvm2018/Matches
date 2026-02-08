@@ -56,11 +56,28 @@
           <div class="card-title">{{ ev.label }}</div>
           <div class="form-row">
             <div class="form-group">
-              <label>每場比賽</label>
+              <label>{{ ev.format === 'group_knockout' ? '小組賽每場比賽' : '每場比賽' }}</label>
               <select class="form-control" v-model="ev.matchBestOf" @change="saveData">
                 <option v-for="b in bestOfOpts" :key="b.value" :value="b.value">{{ b.label }}</option>
               </select>
             </div>
+            <div class="form-group" v-if="ev.format === 'group_knockout'">
+              <label>淘汰賽每場比賽</label>
+              <select class="form-control" v-model="ev.knockoutBestOf" @change="saveData">
+                <option v-for="b in bestOfOpts" :key="b.value" :value="b.value">{{ b.label }}</option>
+              </select>
+            </div>
+            <div class="form-group" v-if="ev.format === 'group_knockout'">
+              <label>每組晉級人數</label>
+              <select class="form-control" v-model.number="ev.advancePerGroup" @change="saveData">
+                <option :value="1">1</option>
+                <option :value="2">2</option>
+                <option :value="3">3</option>
+                <option :value="4">4</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
             <div class="form-group" v-if="ev.type === 'team'">
               <label>團體賽模式</label>
               <select class="form-control" v-model="ev.teamMatchFormat" @change="onTeamFormatChange(ev)">
@@ -103,7 +120,10 @@
 
           <div class="format-info" style="margin-top:8px;">
             <span class="badge badge-accent">{{ formatLabel(ev.format) }}</span>
-            <span class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
+            <span v-if="ev.format === 'group_knockout'" class="badge badge-green">小組{{ bestOfLabel(ev.matchBestOf) }}</span>
+            <span v-if="ev.format === 'group_knockout'" class="badge badge-green">淘汰{{ bestOfLabel(ev.knockoutBestOf || ev.matchBestOf) }}</span>
+            <span v-if="ev.format !== 'group_knockout'" class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
+            <span v-if="ev.format === 'group_knockout'" class="badge">每組晉級 {{ ev.advancePerGroup || 2 }} 名</span>
             <span v-if="ev.type === 'team'" class="badge badge-yellow">
               {{ ev.teamMatchFormat === 'custom' ? (ev.rubbers?.length || 0) + '點' + (ev.pointsToWin || 3) + '勝' : getTeamFormatDesc(ev.teamMatchFormat) }}
             </span>
@@ -321,11 +341,16 @@ function ensureTeamPlayers(ev) {
   for (const m of (ev.roundRobinMatches || [])) { ensurePlayer(m.p1); ensurePlayer(m.p2) }
 }
 
-// 每次資料載入或更新後，確保團體賽有 rubberResults 和 players
+// 每次資料載入或更新後，確保團體賽有 rubberResults 和 players，並補齊缺少的欄位
 function applyTeamMigrations() {
   if (!data.value || !data.value.events) return
   let needsSave = false
   for (const ev of data.value.events) {
+    // 補齊 group_knockout 格式的 knockoutBestOf
+    if (ev.format === 'group_knockout' && !ev.knockoutBestOf) {
+      ev.knockoutBestOf = ev.matchBestOf || 5
+      needsSave = true
+    }
     if (ev.type === 'team') {
       // 檢查是否需要遷移
       const hadRubbers = ev.rubbers && ev.rubbers.length > 0
