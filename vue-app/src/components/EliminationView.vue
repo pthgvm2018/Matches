@@ -42,19 +42,11 @@
       </div>
     </div>
 
-    <!-- 一般比賽詳情 -->
+    <!-- 一般比賽詳情（可展開看每局比分） -->
     <div v-if="!isTeam && completedMatches.length" class="card" style="margin-top:20px;">
       <div class="card-title">比賽詳情</div>
       <div class="match-list">
-        <div v-for="m in completedMatches" :key="m.id" class="match-item">
-          <span class="team left" :class="{ winner: m.winner?.id === m.p1?.id }">{{ m.p1?.name }}</span>
-          <div class="score-box">
-            <span class="s">{{ gameScoreFn(m.scores)[0] }}</span>
-            <span class="divider">:</span>
-            <span class="s">{{ gameScoreFn(m.scores)[1] }}</span>
-          </div>
-          <span class="team right" :class="{ winner: m.winner?.id === m.p2?.id }">{{ m.p2?.name }}</span>
-        </div>
+        <MatchDetail v-for="m in completedMatches" :key="m.id" :match="m" />
       </div>
     </div>
   </div>
@@ -64,6 +56,7 @@
 import { computed } from 'vue'
 import { gameScore as gs } from '../lib/tournament.js'
 import TeamMatchDetail from './TeamMatchDetail.vue'
+import MatchDetail from './MatchDetail.vue'
 
 const props = defineProps({ event: Object })
 

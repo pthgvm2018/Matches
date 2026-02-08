@@ -34,7 +34,11 @@
           </span>
         </div>
         <div v-if="r.scores?.length" class="rubber-games">
-          ({{ r.scores.map(g => g.a + '-' + g.b).join(', ') }})
+          <div v-for="(g, gi) in r.scores" :key="gi" class="game-badge">
+            <span :class="g.a > g.b ? 'gw' : 'gl'">{{ g.a }}</span>
+            <span class="gsep">-</span>
+            <span :class="g.b > g.a ? 'gw' : 'gl'">{{ g.b }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -51,9 +55,9 @@ const open = ref(false)
 const isP1Winner = computed(() => props.match.winner?.id === props.match.p1?.id)
 const gs = computed(() => gameScore(props.match.scores))
 
-// 只顯示實際打過的點 (有 winner 的)
+// 顯示有 winner 或有比分資料的點
 const playedRubbers = computed(() =>
-  (props.match.rubberResults || []).filter(r => r.winner)
+  (props.match.rubberResults || []).filter(r => r.winner || (r.scores?.length > 0))
 )
 
 function rubberGS(r) { return gameScore(r.scores) }
@@ -80,7 +84,19 @@ function rubberGS(r) { return gameScore(r.scores) }
 .rubber-player:first-child { text-align: right; }
 .rubber-player:last-child { text-align: left; }
 .rubber-score { font-weight: 700; font-size: 1rem; min-width: 50px; text-align: center; }
-.rubber-games { text-align: center; font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+.rubber-games {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 6px;
+}
+.game-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 4px; padding: 2px 7px; font-size: 0.78rem; font-weight: 600;
+}
+.gw { color: var(--accent); }
+.gl { color: var(--text-muted); }
+.gsep { color: var(--text-muted); font-weight: 400; }
+
 .winner { color: var(--accent); }
 .loser { color: var(--text-muted); }
 
