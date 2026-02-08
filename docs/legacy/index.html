@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>乒乓球錦標賽</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+</head>
+<body>
+
+  <header class="site-header" id="siteHeader">
+    <div class="container">
+      <h1 id="tournamentTitle">乒乓球錦標賽</h1>
+      <div class="header-meta">
+        <span id="tournamentDate"></span>
+        <span id="tournamentLocation"></span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-bar">
+    <div class="container">
+      <ul>
+        <li><a href="#" class="nav-link active" data-section="rules">賽事規則</a></li>
+        <li><a href="#" class="nav-link" data-section="groups">小組賽</a></li>
+        <li><a href="#" class="nav-link" data-section="knockout">淘汰賽</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- Rules Section -->
+    <section class="section active" id="sec-rules">
+      <div class="section-title"><span class="icon">R</span> 賽事規則</div>
+      <div class="card">
+        <div class="rules-content" id="rulesContent">
+          <p class="empty-state">尚未設定比賽規則</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Group Stage Section -->
+    <section class="section" id="sec-groups">
+      <div class="section-title"><span class="icon">G</span> 小組賽</div>
+      <div id="groupsContainer">
+        <div class="empty-state"><p>尚無小組賽資料</p></div>
+      </div>
+    </section>
+
+    <!-- Knockout Stage Section -->
+    <section class="section" id="sec-knockout">
+      <div class="section-title"><span class="icon">K</span> 淘汰賽</div>
+      <div id="knockoutContainer">
+        <div class="empty-state"><p>尚無淘汰賽資料</p></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">乒乓球錦標賽管理系統</div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Firebase (免費 Spark 方案) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js?v=2"></script>
+
+  <script src="js/demo-data.js?v=5"></script>
+  <script src="js/storage.js?v=5"></script>
+  <script src="js/firestore-sync.js?v=3"></script>
+  <script src="js/view.js?v=7"></script>
+</body>
+</html>
