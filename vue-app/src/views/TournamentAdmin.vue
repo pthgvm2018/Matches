@@ -17,7 +17,7 @@
       <ul>
         <li>
           <button :class="{ active: activeTab === 'rules' }" @click="activeTab = 'rules'">
-            賽事規則
+            賽事設定
           </button>
         </li>
         <li v-for="ev in data.events" :key="ev.id">
@@ -29,15 +29,57 @@
     </div>
 
     <div class="container" style="padding-top:24px;padding-bottom:40px;">
-      <!-- 賽事規則 -->
+      <!-- 賽事設定 -->
       <template v-if="activeTab === 'rules'">
-        <div class="section-title"><span class="icon">R</span> 賽事規則</div>
+        <!-- 基本資訊編輯 -->
+        <div class="section-title"><span class="icon">E</span> 基本資訊</div>
         <div class="card">
-          <div v-if="data.events?.length" style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;">
-            <span v-for="ev in data.events" :key="ev.id" class="badge badge-accent">
-              {{ ev.label }}：{{ bestOfLabel(ev.matchBestOf) }}
+          <div class="form-group">
+            <label>賽事名稱</label>
+            <input class="form-control" v-model="data.name" @change="saveData">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>日期</label>
+              <input class="form-control" type="date" v-model="data.date" @change="saveData">
+            </div>
+            <div class="form-group">
+              <label>地點</label>
+              <input class="form-control" v-model="data.venue" @change="saveData">
+            </div>
+          </div>
+        </div>
+
+        <!-- 各項目設定 -->
+        <div class="section-title" style="margin-top:20px;"><span class="icon">S</span> 項目設定</div>
+        <div v-for="ev in data.events" :key="ev.id" class="card" style="margin-bottom:12px;">
+          <div class="card-title">{{ ev.label }}</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>每場比賽</label>
+              <select class="form-control" v-model="ev.matchBestOf" @change="saveData">
+                <option v-for="b in bestOfOpts" :key="b.value" :value="b.value">{{ b.label }}</option>
+              </select>
+            </div>
+            <div class="form-group" v-if="ev.type === 'team'">
+              <label>團體賽模式</label>
+              <select class="form-control" v-model="ev.teamMatchFormat" @change="onTeamFormatChange(ev)">
+                <option v-for="t in teamFmtOpts" :key="t.value" :value="t.value">{{ t.label }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="format-info">
+            <span class="badge badge-accent">{{ formatLabel(ev.format) }}</span>
+            <span class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
+            <span v-if="ev.type === 'team'" class="badge badge-yellow">
+              {{ getTeamFormatDesc(ev.teamMatchFormat) }}
             </span>
           </div>
+        </div>
+
+        <!-- 賽事規則預覽 -->
+        <div class="section-title" style="margin-top:20px;"><span class="icon">R</span> 賽事規則預覽</div>
+        <div class="card">
           <div v-if="rulesText" style="white-space:pre-wrap;line-height:1.8;">{{ rulesText }}</div>
           <p v-else class="empty-state">尚未設定比賽規則</p>
         </div>
@@ -90,7 +132,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTournament } from '../composables/useTournaments.js'
-import { BEST_OF_OPTIONS, generateRulesText, attachRubbersToEvent } from '../lib/tournament.js'
+import { BEST_OF_OPTIONS, FORMATS, TEAM_MATCH_FORMATS, TEAM_RUBBER_TEMPLATES, generateRulesText, attachRubbersToEvent } from '../lib/tournament.js'
 import RoundRobinAdmin from '../components/RoundRobinAdmin.vue'
 import EliminationAdmin from '../components/EliminationAdmin.vue'
 import GroupKnockoutAdmin from '../components/GroupKnockoutAdmin.vue'
@@ -111,8 +153,33 @@ const rulesText = computed(() => {
   return generateRulesText(data.value)
 })
 
+const bestOfOpts = BEST_OF_OPTIONS
+const teamFmtOpts = TEAM_MATCH_FORMATS
+
 function bestOfLabel(b) {
   return BEST_OF_OPTIONS.find(x => x.value === b)?.label || `${b}局`
+}
+
+function formatLabel(f) {
+  return FORMATS.find(x => x.value === f)?.label || f
+}
+
+function getTeamFormatDesc(fmt) {
+  const tmpl = TEAM_RUBBER_TEMPLATES[fmt]
+  return tmpl ? tmpl.description : '自訂'
+}
+
+function onTeamFormatChange(ev) {
+  if (ev.teamMatchFormat && ev.teamMatchFormat !== 'custom') {
+    const tmpl = TEAM_RUBBER_TEMPLATES[ev.teamMatchFormat]
+    if (tmpl) {
+      ev.rubbers = tmpl.rubbers
+      ev.pointsToWin = tmpl.pointsToWin
+      // 重新為所有比賽附加 rubberResults
+      attachRubbersToEvent(ev)
+    }
+  }
+  saveData()
 }
 
 const viewUrl = computed(() => `${window.location.origin}/Matches/#/t/${tid}`)
