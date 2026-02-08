@@ -16,7 +16,7 @@
     <div class="nav-bar">
       <ul>
         <li>
-          <button :class="{ active: activeTab === 'rules' }" @click="activeTab = 'rules'">
+          <button :class="{ active: activeTab === 'settings' }" @click="activeTab = 'settings'">
             賽事設定
           </button>
         </li>
@@ -29,11 +29,21 @@
     </div>
 
     <div class="container" style="padding-top:24px;padding-bottom:40px;">
-      <!-- 賽事設定 -->
-      <template v-if="activeTab === 'rules'">
-        <!-- 基本資訊編輯 -->
-        <div class="section-title"><span class="icon">E</span> 基本資訊</div>
-        <div class="card">
+      <!-- 賽事設定（四步驟） -->
+      <template v-if="activeTab === 'settings'">
+        <!-- 步驟指示器 -->
+        <div class="steps-bar">
+          <div v-for="(s, i) in settingsStepLabels" :key="i"
+               :class="['step-item', { active: settingsStep === i, done: settingsStep > i }]"
+               @click="settingsStep = i" style="cursor:pointer;">
+            <span class="step-num">{{ settingsStep > i ? '✓' : i + 1 }}</span>
+            <span class="step-label">{{ s }}</span>
+          </div>
+        </div>
+
+        <!-- Step 0: 基本資訊 -->
+        <div v-if="settingsStep === 0" class="card">
+          <div class="card-title">基本資訊</div>
           <div class="form-group">
             <label>賽事名稱</label>
             <input class="form-control" v-model="data.name" @change="saveData">
@@ -50,104 +60,176 @@
           </div>
         </div>
 
-        <!-- 各項目設定 -->
-        <div class="section-title" style="margin-top:20px;"><span class="icon">S</span> 項目設定</div>
-        <div v-for="ev in data.events" :key="ev.id" class="card" style="margin-bottom:12px;">
-          <div class="card-title">{{ ev.label }}</div>
-          <!-- 賽制選擇 -->
-          <div class="form-group">
-            <label>賽制</label>
-            <div class="format-grid">
-              <div v-for="f in formatPresets" :key="f.value"
-                   :class="['format-option', { selected: ev.format === f.value }]"
-                   @click="onFormatChange(ev, f.value)">
-                <span class="format-icon">{{ f.icon }}</span>
-                <span class="format-label">{{ f.label }}</span>
-                <span class="format-desc">{{ f.desc }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="form-row">
+        <!-- Step 1: 比賽項目與賽制 -->
+        <div v-if="settingsStep === 1">
+          <div v-for="ev in data.events" :key="ev.id" class="card" style="margin-bottom:12px;">
+            <div class="card-title">{{ ev.label }}</div>
             <div class="form-group">
-              <label>{{ ev.format === 'group_knockout' ? '小組賽每場比賽' : '每場比賽' }}</label>
-              <select class="form-control" v-model="ev.matchBestOf" @change="saveData">
-                <option v-for="b in bestOfOpts" :key="b.value" :value="b.value">{{ b.label }}</option>
-              </select>
-            </div>
-            <div class="form-group" v-if="ev.format === 'group_knockout'">
-              <label>淘汰賽每場比賽</label>
-              <select class="form-control" v-model="ev.knockoutBestOf" @change="saveData">
-                <option v-for="b in bestOfOpts" :key="b.value" :value="b.value">{{ b.label }}</option>
-              </select>
-            </div>
-            <div class="form-group" v-if="ev.format === 'group_knockout'">
-              <label>每組晉級人數</label>
-              <select class="form-control" v-model.number="ev.advancePerGroup" @change="saveData">
-                <option :value="1">1</option>
-                <option :value="2">2</option>
-                <option :value="3">3</option>
-                <option :value="4">4</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group" v-if="ev.type === 'team'">
-              <label>團體賽模式</label>
-              <select class="form-control" v-model="ev.teamMatchFormat" @change="onTeamFormatChange(ev)">
-                <option v-for="t in teamFmtOpts" :key="t.value" :value="t.value">{{ t.label }}</option>
-              </select>
-            </div>
-            <div class="form-group" v-if="ev.type === 'team'">
-              <label>每隊選手人數</label>
-              <input class="form-control" type="number" min="1" max="30"
-                     v-model.number="ev.teamSize" @change="onTeamSizeChange(ev)">
-            </div>
-          </div>
-          <!-- 自訂場次編輯 -->
-          <template v-if="ev.type === 'team' && ev.teamMatchFormat === 'custom'">
-            <div class="form-row" style="margin-top:12px;">
-              <div class="form-group">
-                <label>總點數</label>
-                <input class="form-control" type="number" min="1" max="15"
-                       :value="ev.rubbers?.length || 5"
-                       @change="onCustomRubberCountChange(ev, $event)">
-              </div>
-              <div class="form-group">
-                <label>勝點數</label>
-                <input class="form-control" type="number" min="1"
-                       v-model.number="ev.pointsToWin" @change="saveData">
+              <label>賽制</label>
+              <div class="format-grid">
+                <div v-for="f in formatPresets" :key="f.value"
+                     :class="['format-option', { selected: ev.format === f.value }]"
+                     @click="onFormatChange(ev, f.value)">
+                  <span class="format-icon">{{ f.icon }}</span>
+                  <span class="format-label">{{ f.label }}</span>
+                  <span class="format-desc">{{ f.desc }}</span>
+                </div>
               </div>
             </div>
-            <div v-for="(r, ri) in (ev.rubbers || [])" :key="ri"
-                 style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.85rem;">
-              <span style="min-width:50px;color:var(--text-muted);">第{{ ri + 1 }}點</span>
-              <select class="form-control" style="width:auto;" v-model="r.type" @change="onCustomRubberEdit(ev)">
-                <option value="singles">單打</option>
-                <option value="doubles">雙打</option>
-                <option value="mixed_doubles">混雙</option>
-              </select>
-              <input class="form-control" style="flex:1;" v-model="r.label"
-                     :placeholder="`第${ri+1}點`" @change="onCustomRubberEdit(ev)">
-            </div>
-          </template>
-
-          <div class="format-info" style="margin-top:8px;">
-            <span v-if="ev.format === 'group_knockout'" class="badge badge-green">小組{{ bestOfLabel(ev.matchBestOf) }}</span>
-            <span v-if="ev.format === 'group_knockout'" class="badge badge-green">淘汰{{ bestOfLabel(ev.knockoutBestOf || ev.matchBestOf) }}</span>
-            <span v-if="ev.format !== 'group_knockout'" class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
-            <span v-if="ev.format === 'group_knockout'" class="badge">每組晉級 {{ ev.advancePerGroup || 2 }} 名</span>
-            <span v-if="ev.type === 'team'" class="badge badge-yellow">
-              {{ ev.teamMatchFormat === 'custom' ? (ev.rubbers?.length || 0) + '點' + (ev.pointsToWin || 3) + '勝' : getTeamFormatDesc(ev.teamMatchFormat) }}
-            </span>
-            <span v-if="ev.type === 'team'" class="badge">每隊 {{ ev.teamSize || 10 }} 人</span>
           </div>
         </div>
 
-        <!-- 賽事規則預覽 -->
-        <div class="section-title" style="margin-top:20px;"><span class="icon">R</span> 賽事規則預覽</div>
-        <div class="card">
-          <div v-if="rulesText" style="white-space:pre-wrap;line-height:1.8;">{{ rulesText }}</div>
-          <p v-else class="empty-state">尚未設定比賽規則</p>
+        <!-- Step 2: 項目設定 -->
+        <div v-if="settingsStep === 2">
+          <div v-for="ev in data.events" :key="ev.id" class="card" style="margin-bottom:12px;">
+            <div class="card-title">{{ ev.label }}
+              <span class="badge badge-accent" style="margin-left:8px;">{{ formatLabel(ev.format) }}</span>
+            </div>
+
+            <!-- 每場局制 -->
+            <div class="form-row">
+              <div class="form-group">
+                <label>{{ ev.format === 'group_knockout' ? '小組賽每場比賽' : '每場比賽' }}</label>
+                <select class="form-control" v-model="ev.matchBestOf" @change="saveData">
+                  <option v-for="b in bestOfOpts" :key="b.value" :value="b.value">{{ b.label }}</option>
+                </select>
+              </div>
+              <div class="form-group" v-if="ev.format === 'group_knockout'">
+                <label>淘汰賽每場比賽</label>
+                <select class="form-control" v-model="ev.knockoutBestOf" @change="saveData">
+                  <option v-for="b in bestOfOpts" :key="b.value" :value="b.value">{{ b.label }}</option>
+                </select>
+              </div>
+              <div class="form-group" v-if="ev.format === 'group_knockout'">
+                <label>每組晉級人數</label>
+                <select class="form-control" v-model.number="ev.advancePerGroup" @change="saveData">
+                  <option :value="1">1</option>
+                  <option :value="2">2</option>
+                  <option :value="3">3</option>
+                  <option :value="4">4</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 團體賽設定 -->
+            <div class="form-row" v-if="ev.type === 'team'">
+              <div class="form-group">
+                <label>團體賽模式</label>
+                <select class="form-control" v-model="ev.teamMatchFormat" @change="onTeamFormatChange(ev)">
+                  <option v-for="t in teamFmtOpts" :key="t.value" :value="t.value">{{ t.label }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>每隊選手人數</label>
+                <input class="form-control" type="number" min="1" max="30"
+                       v-model.number="ev.teamSize" @change="onTeamSizeChange(ev)">
+              </div>
+            </div>
+
+            <!-- 自訂場次編輯 -->
+            <template v-if="ev.type === 'team' && ev.teamMatchFormat === 'custom'">
+              <div class="form-row" style="margin-top:12px;">
+                <div class="form-group">
+                  <label>總點數</label>
+                  <input class="form-control" type="number" min="1" max="15"
+                         :value="ev.rubbers?.length || 5"
+                         @change="onCustomRubberCountChange(ev, $event)">
+                </div>
+                <div class="form-group">
+                  <label>勝點數</label>
+                  <input class="form-control" type="number" min="1"
+                         v-model.number="ev.pointsToWin" @change="saveData">
+                </div>
+              </div>
+              <div v-for="(r, ri) in (ev.rubbers || [])" :key="ri"
+                   style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.85rem;">
+                <span style="min-width:50px;color:var(--text-muted);">第{{ ri + 1 }}點</span>
+                <select class="form-control" style="width:auto;" v-model="r.type" @change="onCustomRubberEdit(ev)">
+                  <option value="singles">單打</option>
+                  <option value="doubles">雙打</option>
+                  <option value="mixed_doubles">混雙</option>
+                </select>
+                <input class="form-control" style="flex:1;" v-model="r.label"
+                       :placeholder="`第${ri+1}點`" @change="onCustomRubberEdit(ev)">
+              </div>
+            </template>
+
+            <div class="format-info" style="margin-top:8px;">
+              <span v-if="ev.format === 'group_knockout'" class="badge badge-green">小組{{ bestOfLabel(ev.matchBestOf) }}</span>
+              <span v-if="ev.format === 'group_knockout'" class="badge badge-green">淘汰{{ bestOfLabel(ev.knockoutBestOf || ev.matchBestOf) }}</span>
+              <span v-if="ev.format !== 'group_knockout'" class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
+              <span v-if="ev.format === 'group_knockout'" class="badge">每組晉級 {{ ev.advancePerGroup || 2 }} 名</span>
+              <span v-if="ev.type === 'team'" class="badge badge-yellow">
+                {{ ev.teamMatchFormat === 'custom' ? (ev.rubbers?.length || 0) + '點' + (ev.pointsToWin || 3) + '勝' : getTeamFormatDesc(ev.teamMatchFormat) }}
+              </span>
+              <span v-if="ev.type === 'team'" class="badge">每隊 {{ ev.teamSize || 10 }} 人</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: 總覽 -->
+        <div v-if="settingsStep === 3">
+          <!-- 賽事總覽 -->
+          <div class="card">
+            <div class="card-title">賽事總覽</div>
+            <div class="confirm-section">
+              <h3>{{ data.name || '未命名賽事' }}</h3>
+              <p style="color:var(--text-secondary);">{{ data.date }} &nbsp; {{ data.venue }}</p>
+            </div>
+            <div v-for="ev in data.events" :key="ev.id" class="confirm-event">
+              <div class="confirm-event-title">{{ ev.label }}</div>
+              <div class="confirm-details">
+                <span class="badge badge-accent">{{ formatLabel(ev.format) }}</span>
+                <span v-if="ev.format === 'group_knockout'" class="badge badge-green">小組{{ bestOfLabel(ev.matchBestOf) }}</span>
+                <span v-if="ev.format === 'group_knockout'" class="badge badge-green">淘汰{{ bestOfLabel(ev.knockoutBestOf || ev.matchBestOf) }}</span>
+                <span v-if="ev.format !== 'group_knockout'" class="badge badge-green">{{ bestOfLabel(ev.matchBestOf) }}</span>
+                <span class="badge badge-yellow">{{ ev.participants?.length || 0 }} {{ ev.type === 'team' ? '隊' : '人' }}</span>
+                <span v-if="ev.type === 'team'" class="badge">每隊 {{ ev.teamSize || 10 }} 人</span>
+              </div>
+              <div v-if="ev.format === 'group_knockout'" style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">
+                {{ ev.groups?.length || 0 }} 組，每組取 {{ ev.advancePerGroup || 2 }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 賽事規則預覽 -->
+          <div class="card" style="margin-top:16px;">
+            <div class="card-title">賽事規則預覽</div>
+            <div v-if="rulesText" style="white-space:pre-wrap;line-height:1.8;">{{ rulesText }}</div>
+            <p v-else class="empty-state">尚未設定比賽規則</p>
+          </div>
+
+          <!-- 分享連結 -->
+          <div class="card" style="margin-top:16px;">
+            <div class="card-title">分享</div>
+            <div class="form-group">
+              <label>查看連結</label>
+              <div class="share-url-box">
+                <input class="share-url-input" readonly :value="viewUrl">
+                <button class="btn btn-primary btn-sm" @click="copy(viewUrl)">複製</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>管理連結</label>
+              <div class="share-url-box">
+                <input class="share-url-input" readonly :value="adminUrl">
+                <button class="btn btn-primary btn-sm" @click="copy(adminUrl)">複製</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 危險操作 -->
+          <div class="card" style="margin-top:16px;border-color:var(--red);">
+            <div class="card-title" style="color:var(--red);">危險操作</div>
+            <button class="btn btn-danger btn-sm" @click="confirmDelete">刪除此賽事</button>
+          </div>
+        </div>
+
+        <!-- 步驟導航按鈕 -->
+        <div class="wizard-actions">
+          <button v-if="settingsStep > 0" class="btn btn-outline" @click="settingsStep--">上一步</button>
+          <div style="flex:1;"></div>
+          <button v-if="settingsStep < 3" class="btn btn-primary" @click="settingsStep++">下一步</button>
         </div>
       </template>
 
@@ -160,31 +242,6 @@
         <GroupKnockoutAdmin v-else-if="activeEvent.format === 'group_knockout'"
                             :event="activeEvent" @save="saveData" />
       </template>
-
-      <!-- 分享連結 -->
-      <div class="card" style="margin-top:24px;">
-        <div class="card-title">分享</div>
-        <div class="form-group">
-          <label>查看連結</label>
-          <div class="share-url-box">
-            <input class="share-url-input" readonly :value="viewUrl">
-            <button class="btn btn-primary btn-sm" @click="copy(viewUrl)">複製</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>管理連結</label>
-          <div class="share-url-box">
-            <input class="share-url-input" readonly :value="adminUrl">
-            <button class="btn btn-primary btn-sm" @click="copy(adminUrl)">複製</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 危險操作 -->
-      <div class="card" style="margin-top:16px;border-color:var(--red);">
-        <div class="card-title" style="color:var(--red);">危險操作</div>
-        <button class="btn btn-danger btn-sm" @click="confirmDelete">刪除此賽事</button>
-      </div>
     </div>
   </template>
 
@@ -208,9 +265,12 @@ const router = useRouter()
 const tid = route.params.id
 const { data, loading, load, listen, save, remove, stop } = useTournament(tid)
 
-const activeTab = ref('rules')
+const activeTab = ref('settings')
+const settingsStep = ref(0)
+const settingsStepLabels = ['基本資訊', '比賽項目', '項目設定', '總覽']
+
 const activeEvent = computed(() => {
-  if (!data.value || activeTab.value === 'rules') return null
+  if (!data.value || activeTab.value === 'settings') return null
   return data.value.events.find(e => e.id === activeTab.value) || null
 })
 

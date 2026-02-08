@@ -504,26 +504,6 @@ async function submit() {
 </script>
 
 <style scoped>
-.steps-bar {
-  display: flex; justify-content: center; gap: 4px; margin-bottom: 24px;
-}
-.step-item {
-  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
-  color: var(--text-muted); font-size: 0.85rem;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
-}
-.step-item.active { color: var(--accent); border-bottom-color: var(--accent); }
-.step-item.done { color: var(--green); }
-.step-num {
-  width: 24px; height: 24px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.75rem; font-weight: 700;
-  background: var(--bg-secondary); border: 1px solid var(--border);
-}
-.step-item.active .step-num { background: var(--accent); color: #fff; border-color: var(--accent); }
-.step-item.done .step-num { background: var(--green); color: #fff; border-color: var(--green); }
-
 .event-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
 }
@@ -548,19 +528,6 @@ async function submit() {
   font-size: 0.85rem; color: var(--text-secondary);
 }
 
-.wizard-actions {
-  display: flex; gap: 12px; margin-top: 24px; padding: 16px 0;
-  border-top: 1px solid var(--border);
-}
-
-.confirm-section h3 { font-size: 1.3rem; color: #fff; margin-bottom: 4px; }
-.confirm-event {
-  padding: 12px 0; border-bottom: 1px solid var(--border);
-}
-.confirm-event:last-child { border-bottom: none; }
-.confirm-event-title { font-weight: 600; color: var(--accent); margin-bottom: 6px; }
-.confirm-details { display: flex; gap: 8px; flex-wrap: wrap; }
-
 .required { color: var(--red); font-size: 0.8rem; font-weight: 400; }
 .input-error { border-color: var(--red) !important; }
 .btn:disabled {
@@ -569,7 +536,5 @@ async function submit() {
 
 @media (max-width: 768px) {
   .event-grid { grid-template-columns: 1fr 1fr; }
-  .steps-bar { flex-wrap: wrap; }
-  .step-label { display: none; }
 }
 </style>
