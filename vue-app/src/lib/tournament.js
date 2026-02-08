@@ -397,9 +397,9 @@ export function generateEventMatches(event, config = {}) {
 
 const SURNAMES = ['王','李','張','劉','陳','楊','趙','黃','周','吳','徐','孫','林','馬','高','胡','鄭','郭','何','羅']
 const GIVEN_NAMES = ['大明','志強','建華','文傑','俊宏','家豪','振偉','彥廷','冠宇','柏翰','宗穎','建志','家銘','國強','明哲','承恩','浩然','宇翔','雅婷','怡君','佳蓉','淑芬','雅琪','惠如','詩涵','欣怡','靜宜','心怡','婉婷','雅文']
-const TEAM_NAMES = ['龍騰','鳳翔','虎嘯','豹躍','鷹揚','獅吼','熊霸','鶴舞','麒麟','玄武','朱雀','青龍','白虎','天狼','飛鷹','雷霆','烈焰','蒼穹','銀河','北斗']
+export const TEAM_NAMES = ['龍騰','鳳翔','虎嘯','豹躍','鷹揚','獅吼','熊霸','鶴舞','麒麟','玄武','朱雀','青龍','白虎','天狼','飛鷹','雷霆','烈焰','蒼穹','銀河','北斗']
 
-function randomName() {
+export function randomName() {
   return SURNAMES[Math.floor(Math.random() * SURNAMES.length)] +
          GIVEN_NAMES[Math.floor(Math.random() * GIVEN_NAMES.length)]
 }

@@ -205,9 +205,9 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  FORMATS, BEST_OF_OPTIONS, TEAM_MATCH_FORMATS, TEAM_RUBBER_TEMPLATES,
+  FORMATS, BEST_OF_OPTIONS, TEAM_MATCH_FORMATS, TEAM_RUBBER_TEMPLATES, TEAM_NAMES,
   createTournament, createEvent, generateEventMatches, simulateEvent,
-  bracketSize, byeCount, suggestGroups, uid, makeEventLabel,
+  bracketSize, byeCount, suggestGroups, uid, makeEventLabel, randomName,
 } from '../lib/tournament.js'
 import { createTournamentDoc } from '../composables/useTournaments.js'
 
@@ -253,18 +253,20 @@ function buildEvents() {
   // 根據 selectedEvents 建立 event 物件（保留已有的）
   const existing = new Map(events.value.map(e => [e.presetKey, e]))
   const result = []
+  let teamNameIdx = 0
   for (const preset of eventPresets) {
     if (!selectedEvents.has(preset.key)) continue
     if (existing.has(preset.key)) {
       result.push(existing.get(preset.key))
     } else {
+      const defaultTeamSize = preset.type === 'team' ? 6 : undefined
       const ev = reactive({
         ...createEvent({
           type: preset.type,
           gender: preset.gender,
           format: 'elimination',
           matchBestOf: 5,
-          teamSize: preset.type === 'team' ? 3 : undefined,
+          teamSize: defaultTeamSize,
           teamMatchFormat: preset.type === 'team' ? 'swaythling' : undefined,
         }),
         presetKey: preset.key,
@@ -276,6 +278,27 @@ function buildEvents() {
           order: i + 1, type: 'singles', label: `第${i + 1}點`,
         })),
       })
+
+      // 團體賽：自動填入示範隊伍名稱與選手名單
+      if (preset.type === 'team') {
+        const demoCount = 4
+        const teamNames = []
+        const usedNames = new Set()
+        for (let t = 0; t < demoCount; t++) {
+          const tName = TEAM_NAMES[(teamNameIdx++) % TEAM_NAMES.length]
+          teamNames.push(tName)
+          const players = []
+          for (let j = 0; j < (defaultTeamSize || 6); j++) {
+            let name
+            do { name = randomName() } while (usedNames.has(name))
+            usedNames.add(name)
+            players.push(name)
+          }
+          ev.participants.push({ id: uid(), name: tName, seed: t + 1, players })
+        }
+        ev.participantText = teamNames.join('\n')
+      }
+
       result.push(ev)
     }
   }
@@ -284,10 +307,31 @@ function buildEvents() {
 
 function parseParticipants(ev) {
   const lines = ev.participantText.split('\n').map(l => l.trim()).filter(Boolean)
+  // 保留已存在的隊伍資料（依名稱比對）
+  const existingMap = new Map(ev.participants.map(p => [p.name, p]))
+  const teamSize = ev.teamSize || 6
+  const usedNames = new Set()
+  // 收集已使用的選手名字
+  for (const p of ev.participants) {
+    for (const name of (p.players || [])) { if (name) usedNames.add(name) }
+  }
+
   ev.participants = lines.map((name, i) => {
+    const existing = existingMap.get(name)
+    if (existing) {
+      existing.seed = i + 1
+      return existing
+    }
     const p = { id: uid(), name, seed: i + 1 }
     if (ev.type === 'team') {
-      p.players = Array.from({ length: ev.teamSize || 10 }, () => '')
+      // 新隊伍自動填入選手名字
+      p.players = []
+      for (let j = 0; j < teamSize; j++) {
+        let pName
+        do { pName = randomName() } while (usedNames.has(pName))
+        usedNames.add(pName)
+        p.players.push(pName)
+      }
     }
     return p
   })
