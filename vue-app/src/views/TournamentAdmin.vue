@@ -294,19 +294,24 @@ function ensureTeamPlayers(ev) {
   for (const m of (ev.roundRobinMatches || [])) { ensurePlayer(m.p1); ensurePlayer(m.p2) }
 }
 
+// 每次資料載入或更新後，確保團體賽有 rubberResults 和 players
+function applyTeamMigrations() {
+  if (!data.value || !data.value.events) return
+  for (const ev of data.value.events) {
+    if (ev.type === 'team') {
+      attachRubbersToEvent(ev)
+      ensureTeamPlayers(ev)
+    }
+  }
+}
+
 onMounted(async () => {
   await load()
   if (data.value && data.value.events.length > 0) {
-    // 團體賽：確保比賽都有 rubberResults 模板，參賽者都有 players 欄位
-    for (const ev of data.value.events) {
-      if (ev.type === 'team') {
-        attachRubbersToEvent(ev)
-        ensureTeamPlayers(ev)
-      }
-    }
+    applyTeamMigrations()
     activeTab.value = data.value.events[0].id
   }
-  listen()
+  listen(applyTeamMigrations)
 })
 onUnmounted(stop)
 </script>

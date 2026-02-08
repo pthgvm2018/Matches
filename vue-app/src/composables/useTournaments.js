@@ -67,7 +67,8 @@ export function useTournament(tournamentId) {
   function listen(onChange) {
     let isFirst = true
     unsubscribe = onSnapshot(docRef, (snap) => {
-      if (isFirst) { isFirst = false }
+      // 跳過第一次回調（已經 load() 過了）
+      if (isFirst) { isFirst = false; return }
       if (saving.value) return
       if (snap.exists()) {
         data.value = { id: snap.id, ...snap.data() }
