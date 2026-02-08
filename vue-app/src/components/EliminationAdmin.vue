@@ -9,7 +9,7 @@
     <div v-for="(round, ri) in (event.bracket?.rounds || [])" :key="ri"
          class="card" style="margin-top:16px;">
       <div class="card-title">{{ roundName(ri) }}</div>
-      <div v-for="(match, mi) in round" :key="match.id">
+      <div v-for="(match, mi) in round.matches" :key="match.id">
         <template v-if="!match.isBye && match.p1 && match.p2">
           <ScoreEditor :match="match" :bestOf="event.matchBestOf"
                        @update="(d) => onScoreUpdate(ri, mi, match, d)" />

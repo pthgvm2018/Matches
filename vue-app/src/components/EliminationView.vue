@@ -13,7 +13,7 @@
           <div v-for="(round, ri) in event.bracket.rounds" :key="ri" class="bracket-round">
             <div class="round-label">{{ roundName(ri) }}</div>
             <div class="bracket-matches">
-              <div v-for="(match, mi) in round" :key="match.id"
+              <div v-for="(match, mi) in round.matches" :key="match.id"
                    :class="['bracket-match', { bye: match.isBye, decided: !!match.winner }]">
                 <div :class="['bm-player', 'bm-top', { winner: match.winner?.id === match.p1?.id }]">
                   <span class="bm-seed" v-if="ri === 0 && match.p1">{{ match.p1.seed }}</span>
@@ -69,7 +69,7 @@ function roundName(ri) {
 
 const completedMatches = computed(() => {
   if (!props.event.bracket) return []
-  return props.event.bracket.rounds.flat().filter(m => m.winner && !m.isBye && m.scores?.length > 0)
+  return props.event.bracket.rounds.flatMap(r => r.matches).filter(m => m.winner && !m.isBye && m.scores?.length > 0)
 })
 </script>
 
