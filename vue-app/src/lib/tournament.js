@@ -321,8 +321,15 @@ function attachRubberResults(matches, rubbers) {
 }
 
 export function attachRubbersToEvent(event) {
-  const rubbers = event.rubbers || []
-  if (!rubbers.length) return
+  let rubbers = event.rubbers || []
+  // 如果沒有 rubbers 模板，自動補上預設模板（swaythling 5點3勝）
+  if (!rubbers.length) {
+    const fmt = event.teamMatchFormat || 'swaythling'
+    const tmpl = TEAM_RUBBER_TEMPLATES[fmt] || TEAM_RUBBER_TEMPLATES.swaythling
+    event.rubbers = tmpl.rubbers
+    if (!event.pointsToWin) event.pointsToWin = tmpl.pointsToWin
+    rubbers = event.rubbers
+  }
   if (event.roundRobinMatches) {
     attachRubberResults(event.roundRobinMatches, rubbers)
   }
