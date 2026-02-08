@@ -7,5 +7,15 @@ export default defineConfig({
   build: {
     outDir: '../docs',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // 把 node_modules 合併為 vendor chunk，避免 _ 開頭的檔名
+          if (id.includes('node_modules')) {
+            return 'vendor'
+          }
+        },
+      },
+    },
   },
 })
