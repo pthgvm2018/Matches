@@ -58,9 +58,9 @@
           </table>
         </div>
 
-        <!-- 團體賽比賽結果（可折疊顯示） -->
-        <div v-if="isTeam && hasCompletedMatches(group.matches)" style="margin-bottom:12px;">
-          <h4 style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:10px;">比賽結果</h4>
+        <!-- 團體賽比賽列表 -->
+        <div v-if="isTeam" style="margin-bottom:12px;">
+          <h4 style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:10px;">比賽詳情</h4>
           <div class="match-list">
             <TeamMatchDetail v-for="m in group.matches" :key="m.id" :match="m" />
           </div>
