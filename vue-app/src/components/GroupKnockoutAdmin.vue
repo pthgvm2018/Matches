@@ -14,19 +14,39 @@
            class="card" style="margin-bottom:16px;">
         <div class="card-title">{{ group.name }} 組</div>
 
-        <div style="overflow-x:auto;margin-bottom:12px;">
+        <!-- 團體賽積分榜 -->
+        <div v-if="isTeam" style="overflow-x:auto;margin-bottom:12px;">
           <table class="standings-table">
             <thead>
-              <tr>
-                <th>#</th>
-                <th>{{ isTeam ? '隊伍' : '選手' }}</th>
-                <th>積分</th>
-                <th>勝</th>
-                <th>負</th>
-              </tr>
+              <tr><th>#</th><th>隊伍</th><th>賽</th><th>勝</th><th>負</th><th>點勝</th><th>點負</th><th>點差</th><th>局勝</th><th>局負</th><th>積分</th></tr>
             </thead>
             <tbody>
-              <tr v-for="(row, i) in groupStandings(group)" :key="row.participant.id"
+              <tr v-for="(row, i) in teamGroupStandings(group)" :key="row.participant.id"
+                  :class="{ qualified: i < event.advancePerGroup }">
+                <td>{{ i + 1 }}</td>
+                <td class="team-name" style="text-align:left;">{{ row.participant.name }}</td>
+                <td>{{ row.matchesPlayed }}</td>
+                <td>{{ row.wins }}</td>
+                <td>{{ row.losses }}</td>
+                <td>{{ row.rubbersWon }}</td>
+                <td>{{ row.rubbersLost }}</td>
+                <td>{{ diffStr(row.rubbersWon - row.rubbersLost) }}</td>
+                <td>{{ row.gamesWon }}</td>
+                <td>{{ row.gamesLost }}</td>
+                <td><strong>{{ row.rankPoints }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 一般積分榜 -->
+        <div v-else style="overflow-x:auto;margin-bottom:12px;">
+          <table class="standings-table">
+            <thead>
+              <tr><th>#</th><th>選手</th><th>積分</th><th>勝</th><th>負</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, i) in normalGroupStandings(group)" :key="row.participant.id"
                   :class="{ qualified: i < event.advancePerGroup }">
                 <td>{{ i + 1 }}</td>
                 <td class="team-name" style="text-align:left;">{{ row.participant.name }}</td>
@@ -38,9 +58,20 @@
           </table>
         </div>
 
-        <div v-for="m in group.matches" :key="m.id">
-          <ScoreEditor :match="m" :bestOf="event.matchBestOf"
-                       @update="(d) => onGroupScoreUpdate(m, d)" />
+        <!-- 團體賽比賽結果（可折疊顯示） -->
+        <div v-if="isTeam && hasCompletedMatches(group.matches)" style="margin-bottom:12px;">
+          <h4 style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:10px;">比賽結果</h4>
+          <div class="match-list">
+            <TeamMatchDetail v-for="m in group.matches" :key="m.id" :match="m" />
+          </div>
+        </div>
+
+        <!-- 一般比分編輯 -->
+        <div v-if="!isTeam">
+          <div v-for="m in group.matches" :key="m.id">
+            <ScoreEditor :match="m" :bestOf="event.matchBestOf"
+                         @update="(d) => onGroupScoreUpdate(m, d)" />
+          </div>
         </div>
       </div>
 
@@ -56,7 +87,7 @@
 
       <div v-for="group in (event.groups || [])" :key="group.id" style="margin-bottom:12px;">
         <strong style="color:var(--accent);">{{ group.name }} 組晉級：</strong>
-        <span v-for="(row, i) in groupStandings(group).slice(0, event.advancePerGroup)"
+        <span v-for="(row, i) in getGroupStandings(group).slice(0, event.advancePerGroup)"
               :key="row.participant.id" class="badge badge-green" style="margin-left:6px;">
           {{ row.participant.name }}
         </span>
@@ -74,9 +105,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { calculateRoundRobinStandings, generateBracket } from '../lib/tournament.js'
+import { calculateRoundRobinStandings, calculateTeamStandings, generateBracket } from '../lib/tournament.js'
 import ScoreEditor from './ScoreEditor.vue'
 import EliminationAdmin from './EliminationAdmin.vue'
+import TeamMatchDetail from './TeamMatchDetail.vue'
 
 const props = defineProps({ event: Object })
 const emit = defineEmits(['save'])
@@ -84,8 +116,24 @@ const emit = defineEmits(['save'])
 const tab = ref('groups')
 const isTeam = computed(() => props.event.type === 'team')
 
-function groupStandings(group) {
+function teamGroupStandings(group) {
+  return calculateTeamStandings(group.participants, group.matches)
+}
+
+function normalGroupStandings(group) {
   return calculateRoundRobinStandings(group.participants, group.matches)
+}
+
+function getGroupStandings(group) {
+  return isTeam.value
+    ? calculateTeamStandings(group.participants, group.matches)
+    : calculateRoundRobinStandings(group.participants, group.matches)
+}
+
+function diffStr(n) { return n > 0 ? '+' + n : '' + n }
+
+function hasCompletedMatches(matches) {
+  return matches?.some(m => m.winner)
 }
 
 function onGroupScoreUpdate(match, { scores, winner }) {
@@ -96,10 +144,9 @@ function onGroupScoreUpdate(match, { scores, winner }) {
 }
 
 function promote() {
-  // 收集各組晉級者
   const promoted = []
   for (const group of (props.event.groups || [])) {
-    const standings = groupStandings(group)
+    const standings = getGroupStandings(group)
     for (let i = 0; i < props.event.advancePerGroup && i < standings.length; i++) {
       promoted.push({
         ...standings[i].participant,
@@ -108,7 +155,6 @@ function promote() {
     }
   }
 
-  // 重新產生淘汰賽
   props.event.bracket = generateBracket(promoted)
   emit('save')
   tab.value = 'knockout'

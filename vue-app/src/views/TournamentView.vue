@@ -10,31 +10,42 @@
       </div>
     </div>
 
-    <!-- 項目 Tab -->
+    <!-- Tab 導航 -->
     <div class="nav-bar">
       <ul>
+        <li>
+          <button :class="{ active: activeTab === 'rules' }" @click="activeTab = 'rules'">
+            賽事規則
+          </button>
+        </li>
         <li v-for="ev in data.events" :key="ev.id">
-          <button :class="{ active: activeEventId === ev.id }" @click="activeEventId = ev.id">
+          <button :class="{ active: activeTab === ev.id }" @click="activeTab = ev.id">
             {{ ev.label }}
           </button>
         </li>
       </ul>
     </div>
 
-    <!-- 當前項目內容 -->
     <div class="container" style="padding-top:24px;padding-bottom:40px;">
+      <!-- 賽事規則 -->
+      <template v-if="activeTab === 'rules'">
+        <div class="section-title"><span class="icon">R</span> 賽事規則</div>
+        <div class="card">
+          <div v-if="data.events?.length" style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;">
+            <span v-for="ev in data.events" :key="ev.id" class="badge badge-accent">
+              {{ ev.label }}：{{ bestOfLabel(ev.matchBestOf) }}
+            </span>
+          </div>
+          <div v-if="rulesText" style="white-space:pre-wrap;line-height:1.8;">{{ rulesText }}</div>
+          <p v-else class="empty-state">尚未設定比賽規則</p>
+        </div>
+      </template>
+
+      <!-- 各項目內容 -->
       <template v-if="activeEvent">
-        <!-- 循環賽 -->
-        <RoundRobinView v-if="activeEvent.format === 'round_robin'"
-                        :event="activeEvent" />
-
-        <!-- 淘汰賽 -->
-        <EliminationView v-else-if="activeEvent.format === 'elimination'"
-                         :event="activeEvent" />
-
-        <!-- 分組循環+淘汰 -->
-        <GroupKnockoutView v-else-if="activeEvent.format === 'group_knockout'"
-                           :event="activeEvent" />
+        <RoundRobinView v-if="activeEvent.format === 'round_robin'" :event="activeEvent" />
+        <EliminationView v-else-if="activeEvent.format === 'elimination'" :event="activeEvent" />
+        <GroupKnockoutView v-else-if="activeEvent.format === 'group_knockout'" :event="activeEvent" />
       </template>
     </div>
   </template>
@@ -49,6 +60,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTournament } from '../composables/useTournaments.js'
+import { BEST_OF_OPTIONS, generateRulesText } from '../lib/tournament.js'
 import RoundRobinView from '../components/RoundRobinView.vue'
 import EliminationView from '../components/EliminationView.vue'
 import GroupKnockoutView from '../components/GroupKnockoutView.vue'
@@ -57,17 +69,23 @@ const route = useRoute()
 const tid = route.params.id
 const { data, loading, load, listen, stop } = useTournament(tid)
 
-const activeEventId = ref(null)
+const activeTab = ref('rules')
 const activeEvent = computed(() => {
-  if (!data.value) return null
-  return data.value.events.find(e => e.id === activeEventId.value) || data.value.events[0]
+  if (!data.value || activeTab.value === 'rules') return null
+  return data.value.events.find(e => e.id === activeTab.value) || null
 })
+
+const rulesText = computed(() => {
+  if (!data.value) return ''
+  return generateRulesText(data.value)
+})
+
+function bestOfLabel(b) {
+  return BEST_OF_OPTIONS.find(x => x.value === b)?.label || `${b}局`
+}
 
 onMounted(async () => {
   await load()
-  if (data.value && data.value.events.length > 0) {
-    activeEventId.value = data.value.events[0].id
-  }
   listen()
 })
 onUnmounted(stop)

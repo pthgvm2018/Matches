@@ -307,15 +307,30 @@ export function generateGroupKnockout(participants, numGroups, advancePerGroup) 
 
 // ===== 團體賽 =====
 
-export function generateTeamMatch(team1, team2, rubbers) {
-  return {
-    id: uid(),
-    team1, team2,
-    winner: null,
-    rubberResults: rubbers.map(r => ({
-      ...r, id: uid(),
-      p1: null, p2: null, winner: null, scores: [],
-    })),
+// 為團體賽的比賽附加各點 (rubber) 模板
+function attachRubberResults(matches, rubbers) {
+  for (const m of matches) {
+    if (m.isBye || m.rubberResults) continue
+    m.rubberResults = rubbers.map(r => ({
+      order: r.order, label: r.label, type: r.type,
+      p1Name: '', p2Name: '',
+      winner: null, scores: [],
+    }))
+    m.teamScore = { a: 0, b: 0 }
+  }
+}
+
+function attachRubbersToEvent(event) {
+  const rubbers = event.rubbers || []
+  if (!rubbers.length) return
+  if (event.roundRobinMatches) {
+    attachRubberResults(event.roundRobinMatches, rubbers)
+  }
+  if (event.groups) {
+    for (const g of event.groups) attachRubberResults(g.matches, rubbers)
+  }
+  if (event.bracket?.rounds) {
+    for (const r of event.bracket.rounds) attachRubberResults(r.matches, rubbers)
   }
 }
 
@@ -364,24 +379,30 @@ export function generateEventMatches(event, config = {}) {
     event.bracket = gk.bracket
     event.advancePerGroup = advance
   }
+  // 團體賽：為所有比賽附加各點模板
+  if (event.type === 'team') {
+    attachRubbersToEvent(event)
+  }
   return event
 }
 
 // ===== 模擬賽事結果 =====
 
+const SURNAMES = ['王','李','張','劉','陳','楊','趙','黃','周','吳','徐','孫','林','馬','高','胡','鄭','郭','何','羅']
+const GIVEN_NAMES = ['大明','志強','建華','文傑','俊宏','家豪','振偉','彥廷','冠宇','柏翰','宗穎','建志','家銘','國強','明哲','承恩','浩然','宇翔','雅婷','怡君','佳蓉','淑芬','雅琪','惠如','詩涵','欣怡','靜宜','心怡','婉婷','雅文']
+
+function randomName() {
+  return SURNAMES[Math.floor(Math.random() * SURNAMES.length)] +
+         GIVEN_NAMES[Math.floor(Math.random() * GIVEN_NAMES.length)]
+}
+
 // 產生一局擬真桌球比分 (11分制, deuce 需贏兩分)
 function simulateGameScore(pWin = 0.55) {
-  // pWin: p1 每球得分機率
   let a = 0, b = 0
   while (true) {
     if (a >= 11 && a - b >= 2) return { a, b }
     if (b >= 11 && b - a >= 2) return { a, b }
-    if (a >= 10 && b >= 10) {
-      // deuce
-      if (Math.random() < pWin) a++; else b++
-    } else {
-      if (Math.random() < pWin) a++; else b++
-    }
+    if (Math.random() < pWin) a++; else b++
   }
 }
 
@@ -389,15 +410,13 @@ function simulateGameScore(pWin = 0.55) {
 function seedWinProb(p1, p2) {
   const s1 = p1?.seed || 50
   const s2 = p2?.seed || 50
-  // 種子越小越強，差距轉換為勝率 0.35 ~ 0.65
-  const diff = s2 - s1 // 正值 = p1 種子較優
+  const diff = s2 - s1
   return 0.5 + Math.min(Math.max(diff * 0.02, -0.15), 0.15)
 }
 
-// 模擬一場比賽 (bestOf 局)
+// 模擬一場個人賽 (bestOf 局)
 function simulateMatch(match, bestOf) {
-  if (!match.p1 || !match.p2) return
-  if (match.isBye) return
+  if (!match.p1 || !match.p2 || match.isBye) return
 
   const pWin = seedWinProb(match.p1, match.p2)
   const toWin = Math.ceil(bestOf / 2)
@@ -405,7 +424,6 @@ function simulateMatch(match, bestOf) {
   const scores = []
 
   while (w1 < toWin && w2 < toWin) {
-    // 每局勝率加點隨機波動
     const gamePWin = pWin + (Math.random() - 0.5) * 0.2
     const game = simulateGameScore(Math.min(Math.max(gamePWin, 0.3), 0.7))
     scores.push(game)
@@ -416,23 +434,82 @@ function simulateMatch(match, bestOf) {
   match.winner = w1 > w2 ? match.p1 : match.p2
 }
 
+// 模擬一場團體賽 (各點逐點模擬)
+function simulateTeamMatch(match, event) {
+  if (!match.p1 || !match.p2 || match.isBye) return
+
+  const rubbers = match.rubberResults || []
+  const ptw = event.pointsToWin || 3
+  const bestOf = event.matchBestOf || 5
+  let s1 = 0, s2 = 0
+
+  for (const rubber of rubbers) {
+    // 已分出勝負的點不再比賽
+    if (s1 >= ptw || s2 >= ptw) {
+      rubber.scores = []
+      rubber.winner = null
+      rubber.p1Name = ''
+      rubber.p2Name = ''
+      continue
+    }
+
+    // 產生選手名稱
+    if (rubber.type === 'doubles' || rubber.type === 'mixed_doubles') {
+      rubber.p1Name = randomName() + ' / ' + randomName()
+      rubber.p2Name = randomName() + ' / ' + randomName()
+    } else {
+      rubber.p1Name = randomName()
+      rubber.p2Name = randomName()
+    }
+
+    // 模擬各局比分
+    const pWin = 0.5 + (Math.random() - 0.5) * 0.3
+    const toWin = Math.ceil(bestOf / 2)
+    let w1 = 0, w2 = 0
+    rubber.scores = []
+
+    while (w1 < toWin && w2 < toWin) {
+      const gp = pWin + (Math.random() - 0.5) * 0.15
+      const g = simulateGameScore(Math.min(Math.max(gp, 0.3), 0.7))
+      rubber.scores.push(g)
+      if (g.a > g.b) w1++; else w2++
+    }
+
+    rubber.winner = w1 > w2 ? 1 : 2
+    if (w1 > w2) s1++; else s2++
+  }
+
+  match.teamScore = { a: s1, b: s2 }
+  match.winner = s1 > s2 ? match.p1 : match.p2
+  match.scores = [] // 團體賽不使用 match.scores
+}
+
 // 模擬循環賽
-function simulateRoundRobinMatches(matches, bestOf) {
+function simulateRoundRobinMatches(matches, bestOf, isTeam, event) {
   for (const m of matches) {
-    simulateMatch(m, bestOf)
+    if (isTeam) simulateTeamMatch(m, event)
+    else simulateMatch(m, bestOf)
   }
 }
 
 // 模擬淘汰賽 (含自動晉級傳播)
-function simulateEliminationRounds(rounds, bestOf) {
+function simulateEliminationRounds(rounds, bestOf, isTeam, event) {
   for (let r = 0; r < rounds.length; r++) {
     const curMatches = rounds[r].matches
     for (let i = 0; i < curMatches.length; i++) {
       const match = curMatches[i]
-      if (match.isBye) {
-        // bye 已經有 winner，直接晉級
-      } else if (match.p1 && match.p2) {
-        simulateMatch(match, bestOf)
+      if (!match.isBye && match.p1 && match.p2) {
+        // 團體賽淘汰賽的比賽也需要 rubberResults
+        if (isTeam && !match.rubberResults) {
+          const rubbers = event.rubbers || []
+          match.rubberResults = rubbers.map(rb => ({
+            order: rb.order, label: rb.label, type: rb.type,
+            p1Name: '', p2Name: '', winner: null, scores: [],
+          }))
+          match.teamScore = { a: 0, b: 0 }
+        }
+        if (isTeam) simulateTeamMatch(match, event)
+        else simulateMatch(match, bestOf)
       }
       // 傳播勝者到下一輪
       if (match.winner && r < rounds.length - 1) {
@@ -448,25 +525,27 @@ function simulateEliminationRounds(rounds, bestOf) {
 // 模擬整個項目
 export function simulateEvent(event) {
   const bestOf = event.matchBestOf || 5
+  const isTeam = event.type === 'team'
 
   if (event.format === 'round_robin') {
-    simulateRoundRobinMatches(event.roundRobinMatches || [], bestOf)
+    simulateRoundRobinMatches(event.roundRobinMatches || [], bestOf, isTeam, event)
 
   } else if (event.format === 'elimination') {
     if (event.bracket?.rounds) {
-      simulateEliminationRounds(event.bracket.rounds, bestOf)
+      simulateEliminationRounds(event.bracket.rounds, bestOf, isTeam, event)
     }
 
   } else if (event.format === 'group_knockout') {
     // 1. 模擬各組循環賽
     for (const group of (event.groups || [])) {
-      simulateRoundRobinMatches(group.matches, bestOf)
+      simulateRoundRobinMatches(group.matches, bestOf, isTeam, event)
     }
 
     // 2. 晉級：各組前 N 名進入淘汰賽
     const promoted = []
+    const standingsFn = isTeam ? calculateTeamStandings : calculateRoundRobinStandings
     for (const group of (event.groups || [])) {
-      const standings = calculateRoundRobinStandings(group.participants, group.matches)
+      const standings = standingsFn(group.participants, group.matches)
       const advance = event.advancePerGroup || 2
       for (let i = 0; i < advance && i < standings.length; i++) {
         promoted.push({
@@ -479,11 +558,128 @@ export function simulateEvent(event) {
     // 3. 用實際晉級者重新產生淘汰賽並模擬
     if (promoted.length >= 2) {
       event.bracket = generateBracket(promoted)
-      simulateEliminationRounds(event.bracket.rounds, bestOf)
+      simulateEliminationRounds(event.bracket.rounds, bestOf, isTeam, event)
     }
   }
 
   return event
+}
+
+// ===== 團體賽積分榜 =====
+
+export function calculateTeamStandings(participants, matches) {
+  const stats = {}
+  for (const p of participants) {
+    stats[p.id] = {
+      participant: p,
+      wins: 0, losses: 0, matchesPlayed: 0,
+      rubbersWon: 0, rubbersLost: 0,
+      gamesWon: 0, gamesLost: 0,
+      rankPoints: 0,
+    }
+  }
+
+  for (const m of matches) {
+    if (!m.winner) continue
+    const s1 = stats[m.p1?.id]
+    const s2 = stats[m.p2?.id]
+    if (!s1 || !s2) continue
+
+    s1.matchesPlayed++
+    s2.matchesPlayed++
+
+    if (m.winner.id === m.p1.id) {
+      s1.wins++; s1.rankPoints += 2
+      s2.losses++; s2.rankPoints += 1
+    } else {
+      s2.wins++; s2.rankPoints += 2
+      s1.losses++; s1.rankPoints += 1
+    }
+
+    // 計算點數 (rubbers)
+    const ts = m.teamScore || { a: 0, b: 0 }
+    s1.rubbersWon += ts.a; s1.rubbersLost += ts.b
+    s2.rubbersWon += ts.b; s2.rubbersLost += ts.a
+
+    // 計算局數 (games across all rubbers)
+    for (const r of (m.rubberResults || [])) {
+      for (const g of (r.scores || [])) {
+        if (g.a > g.b) { s1.gamesWon++; s2.gamesLost++ }
+        else if (g.b > g.a) { s2.gamesWon++; s1.gamesLost++ }
+      }
+    }
+  }
+
+  return Object.values(stats).sort((a, b) => {
+    if (b.rankPoints !== a.rankPoints) return b.rankPoints - a.rankPoints
+    if (b.wins !== a.wins) return b.wins - a.wins
+    const rdA = a.rubbersWon - a.rubbersLost
+    const rdB = b.rubbersWon - b.rubbersLost
+    if (rdB !== rdA) return rdB - rdA
+    const gdA = a.gamesWon - a.gamesLost
+    const gdB = b.gamesWon - b.gamesLost
+    return gdB - gdA
+  })
+}
+
+// ===== 自動產生賽事規則文字 =====
+
+export function generateRulesText(tournament) {
+  const lines = []
+  const events = tournament.events || []
+  if (!events.length) return ''
+
+  lines.push('一、賽事簡介')
+  const evLabels = events.map(e => e.label).join('、')
+  lines.push(`本${tournament.name || '賽事'}設有${evLabels}等項目。`)
+  lines.push('')
+
+  let section = 2
+  for (const ev of events) {
+    const numLabel = ['','一','二','三','四','五','六','七','八','九','十'][section] || section
+    const bestOfLabel = BEST_OF_OPTIONS.find(x => x.value === ev.matchBestOf)?.label || `${ev.matchBestOf}局`
+    const formatLabel = FORMATS.find(x => x.value === ev.format)?.label || ev.format
+    const pCount = ev.participants?.length || 0
+    const unit = ev.type === 'team' ? '隊' : '人'
+    const typeLabel = EVENT_TYPES.find(x => x.value === ev.type)?.label || ''
+
+    lines.push(`${numLabel}、${ev.label}`)
+    lines.push(`1. 共 ${pCount} ${unit}參賽，賽制：${formatLabel}。`)
+    lines.push(`2. 每場比賽採${bestOfLabel}制。`)
+    lines.push(`3. 每局 11 分，10 平後須連贏 2 分。`)
+
+    if (ev.type === 'team') {
+      const rubbers = ev.rubbers || []
+      const rubberTypes = rubbers.map(r => {
+        const t = EVENT_TYPES.find(x => x.value === r.type)?.label || r.type
+        return t
+      })
+      const ptw = ev.pointsToWin || 3
+      const totalPts = rubbers.length
+      lines.push(`4. 團體賽採 ${totalPts} 點 ${ptw} 勝制。`)
+      const typeSet = [...new Set(rubberTypes)]
+      if (typeSet.length === 1) {
+        lines.push(`5. 每點為${typeSet[0]}，採${bestOfLabel}制。`)
+      } else {
+        lines.push(`5. 各點內容：${rubbers.map(r => r.label).join('、')}。`)
+      }
+    }
+
+    if (ev.format === 'group_knockout') {
+      const nGroups = ev.groups?.length || 0
+      const adv = ev.advancePerGroup || 2
+      const groupNames = (ev.groups || []).map(g => g.name).join('、')
+      lines.push(`${ev.type === 'team' ? '6' : '4'}. ${pCount} ${unit}分為 ${groupNames} 共 ${nGroups} 組。`)
+      lines.push(`${ev.type === 'team' ? '7' : '5'}. 採組內單循環賽制，各組前 ${adv} 名晉級淘汰賽。`)
+      lines.push(`${ev.type === 'team' ? '8' : '6'}. 積分規則：勝場得 2 分，負場得 1 分。`)
+      lines.push(`${ev.type === 'team' ? '9' : '7'}. 若積分相同，依序比較：勝負關係 → ${ev.type === 'team' ? '點差 → ' : ''}局差 → 小分差。`)
+    }
+
+    lines.push('')
+    section++
+  }
+
+  return lines.join('\n')
 }
 
 // ===== 比分計算 =====

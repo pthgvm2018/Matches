@@ -12,11 +12,16 @@
       </div>
     </div>
 
-    <!-- 項目 Tab -->
+    <!-- Tab 導航 -->
     <div class="nav-bar">
       <ul>
+        <li>
+          <button :class="{ active: activeTab === 'rules' }" @click="activeTab = 'rules'">
+            賽事規則
+          </button>
+        </li>
         <li v-for="ev in data.events" :key="ev.id">
-          <button :class="{ active: activeEventId === ev.id }" @click="activeEventId = ev.id">
+          <button :class="{ active: activeTab === ev.id }" @click="activeTab = ev.id">
             {{ ev.label }}
           </button>
         </li>
@@ -24,16 +29,26 @@
     </div>
 
     <div class="container" style="padding-top:24px;padding-bottom:40px;">
+      <!-- 賽事規則 -->
+      <template v-if="activeTab === 'rules'">
+        <div class="section-title"><span class="icon">R</span> 賽事規則</div>
+        <div class="card">
+          <div v-if="data.events?.length" style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;">
+            <span v-for="ev in data.events" :key="ev.id" class="badge badge-accent">
+              {{ ev.label }}：{{ bestOfLabel(ev.matchBestOf) }}
+            </span>
+          </div>
+          <div v-if="rulesText" style="white-space:pre-wrap;line-height:1.8;">{{ rulesText }}</div>
+          <p v-else class="empty-state">尚未設定比賽規則</p>
+        </div>
+      </template>
+
+      <!-- 各項目管理 -->
       <template v-if="activeEvent">
-        <!-- 循環賽管理 -->
         <RoundRobinAdmin v-if="activeEvent.format === 'round_robin'"
                          :event="activeEvent" @save="saveData" />
-
-        <!-- 淘汰賽管理 -->
         <EliminationAdmin v-else-if="activeEvent.format === 'elimination'"
                           :event="activeEvent" @save="saveData" />
-
-        <!-- 分組+淘汰管理 -->
         <GroupKnockoutAdmin v-else-if="activeEvent.format === 'group_knockout'"
                             :event="activeEvent" @save="saveData" />
       </template>
@@ -75,6 +90,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTournament } from '../composables/useTournaments.js'
+import { BEST_OF_OPTIONS, generateRulesText } from '../lib/tournament.js'
 import RoundRobinAdmin from '../components/RoundRobinAdmin.vue'
 import EliminationAdmin from '../components/EliminationAdmin.vue'
 import GroupKnockoutAdmin from '../components/GroupKnockoutAdmin.vue'
@@ -84,11 +100,20 @@ const router = useRouter()
 const tid = route.params.id
 const { data, loading, load, listen, save, remove, stop } = useTournament(tid)
 
-const activeEventId = ref(null)
+const activeTab = ref('rules')
 const activeEvent = computed(() => {
-  if (!data.value) return null
-  return data.value.events.find(e => e.id === activeEventId.value) || data.value.events[0]
+  if (!data.value || activeTab.value === 'rules') return null
+  return data.value.events.find(e => e.id === activeTab.value) || null
 })
+
+const rulesText = computed(() => {
+  if (!data.value) return ''
+  return generateRulesText(data.value)
+})
+
+function bestOfLabel(b) {
+  return BEST_OF_OPTIONS.find(x => x.value === b)?.label || `${b}局`
+}
 
 const viewUrl = computed(() => `${window.location.origin}/Matches/#/t/${tid}`)
 const adminUrl = computed(() => `${window.location.origin}/Matches/#/admin/t/${tid}`)
@@ -111,7 +136,7 @@ async function confirmDelete() {
 onMounted(async () => {
   await load()
   if (data.value && data.value.events.length > 0) {
-    activeEventId.value = data.value.events[0].id
+    activeTab.value = data.value.events[0].id
   }
   listen()
 })

@@ -18,12 +18,14 @@
                 <div :class="['bm-player', 'bm-top', { winner: match.winner?.id === match.p1?.id }]">
                   <span class="bm-seed" v-if="ri === 0 && match.p1">{{ match.p1.seed }}</span>
                   <span class="bm-name">{{ match.p1?.name || (match.isBye && !match.p1 ? 'BYE' : '-') }}</span>
-                  <span class="bm-score" v-if="match.scores?.length">{{ gameScore(match.scores)[0] }}</span>
+                  <span class="bm-score" v-if="isTeam && match.teamScore">{{ match.teamScore.a }}</span>
+                  <span class="bm-score" v-else-if="match.scores?.length">{{ gameScoreFn(match.scores)[0] }}</span>
                 </div>
                 <div :class="['bm-player', 'bm-bot', { winner: match.winner?.id === match.p2?.id }]">
                   <span class="bm-seed" v-if="ri === 0 && match.p2">{{ match.p2.seed }}</span>
                   <span class="bm-name">{{ match.p2?.name || (match.isBye && !match.p2 ? 'BYE' : '-') }}</span>
-                  <span class="bm-score" v-if="match.scores?.length">{{ gameScore(match.scores)[1] }}</span>
+                  <span class="bm-score" v-if="isTeam && match.teamScore">{{ match.teamScore.b }}</span>
+                  <span class="bm-score" v-else-if="match.scores?.length">{{ gameScoreFn(match.scores)[1] }}</span>
                 </div>
               </div>
             </div>
@@ -32,16 +34,24 @@
       </div>
     </div>
 
-    <!-- 比賽詳情 -->
-    <div v-if="completedMatches.length" class="card" style="margin-top:20px;">
+    <!-- 團體賽比賽詳情 (可折疊) -->
+    <div v-if="isTeam && completedMatches.length" class="card" style="margin-top:20px;">
+      <div class="card-title">比賽詳情</div>
+      <div class="match-list">
+        <TeamMatchDetail v-for="m in completedMatches" :key="m.id" :match="m" />
+      </div>
+    </div>
+
+    <!-- 一般比賽詳情 -->
+    <div v-if="!isTeam && completedMatches.length" class="card" style="margin-top:20px;">
       <div class="card-title">比賽詳情</div>
       <div class="match-list">
         <div v-for="m in completedMatches" :key="m.id" class="match-item">
           <span class="team left" :class="{ winner: m.winner?.id === m.p1?.id }">{{ m.p1?.name }}</span>
           <div class="score-box">
-            <span class="s">{{ gameScore(m.scores)[0] }}</span>
+            <span class="s">{{ gameScoreFn(m.scores)[0] }}</span>
             <span class="divider">:</span>
-            <span class="s">{{ gameScore(m.scores)[1] }}</span>
+            <span class="s">{{ gameScoreFn(m.scores)[1] }}</span>
           </div>
           <span class="team right" :class="{ winner: m.winner?.id === m.p2?.id }">{{ m.p2?.name }}</span>
         </div>
@@ -53,10 +63,13 @@
 <script setup>
 import { computed } from 'vue'
 import { gameScore as gs } from '../lib/tournament.js'
+import TeamMatchDetail from './TeamMatchDetail.vue'
 
 const props = defineProps({ event: Object })
 
-function gameScore(scores) { return gs(scores) }
+const isTeam = computed(() => props.event.type === 'team')
+
+function gameScoreFn(scores) { return gs(scores) }
 
 function roundName(ri) {
   const total = props.event.bracket.rounds.length
@@ -69,7 +82,8 @@ function roundName(ri) {
 
 const completedMatches = computed(() => {
   if (!props.event.bracket) return []
-  return props.event.bracket.rounds.flatMap(r => r.matches).filter(m => m.winner && !m.isBye && m.scores?.length > 0)
+  return props.event.bracket.rounds.flatMap(r => r.matches)
+    .filter(m => m.winner && !m.isBye)
 })
 </script>
 
