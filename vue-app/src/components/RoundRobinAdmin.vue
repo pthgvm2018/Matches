@@ -24,7 +24,7 @@
         <div class="card-title">編輯比分</div>
         <TeamMatchEditor v-for="m in event.roundRobinMatches" :key="m.id" :match="m"
           :bestOf="event.matchBestOf" :pointsToWin="event.pointsToWin || 3"
-          :participants="allParticipants"
+          :participants="allParticipants" :rubbers="event.rubbers || []"
           @update="(d) => onTeamMatchUpdate(m, d)" />
         <button class="btn btn-success" style="margin-top:12px;" @click="$emit('save')">
           儲存變更

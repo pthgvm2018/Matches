@@ -27,7 +27,7 @@
           <template v-if="!match.isBye && match.p1 && match.p2">
             <TeamMatchEditor v-if="isTeam" :match="match"
               :bestOf="event.matchBestOf" :pointsToWin="event.pointsToWin || 3"
-              :participants="allParticipants"
+              :participants="allParticipants" :rubbers="event.rubbers || []"
               @update="(d) => onTeamScoreUpdate(ri, mi, match, d)" />
             <ScoreEditor v-else :match="match" :bestOf="event.matchBestOf"
                          @update="(d) => onScoreUpdate(ri, mi, match, d)" />

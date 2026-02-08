@@ -119,6 +119,7 @@ const props = defineProps({
   bestOf: { type: Number, default: 5 },
   pointsToWin: { type: Number, default: 3 },
   participants: { type: Array, default: () => [] },
+  rubbers: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['update'])
 
@@ -134,15 +135,34 @@ const hasPlayerRosters = computed(() =>
 )
 
 function initRubbers() {
-  return (props.match.rubberResults || []).map(r => ({
+  const results = props.match.rubberResults || []
+  if (results.length > 0) {
+    return results.map(r => ({
+      order: r.order,
+      label: r.label,
+      type: r.type,
+      p1Name: r.p1Name || '',
+      p2Name: r.p2Name || '',
+      p1Indices: parseIndices(r.p1Name, r.type, 'p1'),
+      p2Indices: parseIndices(r.p2Name, r.type, 'p2'),
+      scores: initScores(r.scores),
+    }))
+  }
+  // Generate default rubbers from template or based on pointsToWin
+  const template = props.rubbers && props.rubbers.length > 0
+    ? props.rubbers
+    : Array.from({ length: props.pointsToWin * 2 - 1 }, (_, i) => ({
+        order: i + 1, label: `第${i + 1}點`, type: 'singles',
+      }))
+  return template.map(r => ({
     order: r.order,
     label: r.label,
     type: r.type,
-    p1Name: r.p1Name || '',
-    p2Name: r.p2Name || '',
-    p1Indices: parseIndices(r.p1Name, r.type, 'p1'),
-    p2Indices: parseIndices(r.p2Name, r.type, 'p2'),
-    scores: initScores(r.scores),
+    p1Name: '',
+    p2Name: '',
+    p1Indices: (r.type === 'doubles' || r.type === 'mixed_doubles') ? [-1, -1] : [-1],
+    p2Indices: (r.type === 'doubles' || r.type === 'mixed_doubles') ? [-1, -1] : [-1],
+    scores: initScores([]),
   }))
 }
 
@@ -280,7 +300,14 @@ function save() {
 }
 
 watch(() => props.match.rubberResults, (newVal) => {
-  if (newVal) {
+  if (newVal && newVal.length > 0) {
+    rubbers.value = initRubbers()
+  }
+}, { deep: true })
+
+// Also re-init when rubbers template prop changes
+watch(() => props.rubbers, () => {
+  if (!props.match.rubberResults?.length) {
     rubbers.value = initRubbers()
   }
 }, { deep: true })

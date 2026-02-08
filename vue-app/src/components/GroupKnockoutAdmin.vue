@@ -72,7 +72,7 @@
           <h4 style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:10px;">比賽詳情</h4>
           <TeamMatchEditor v-for="m in group.matches" :key="m.id" :match="m"
             :bestOf="event.matchBestOf" :pointsToWin="event.pointsToWin || 3"
-            :participants="allParticipants"
+            :participants="allParticipants" :rubbers="event.rubbers || []"
             @update="(d) => onTeamMatchUpdate(m, d)" />
         </div>
 
