@@ -259,7 +259,7 @@ function buildEvents() {
     if (existing.has(preset.key)) {
       result.push(existing.get(preset.key))
     } else {
-      const defaultTeamSize = preset.type === 'team' ? 6 : undefined
+      const defaultTeamSize = preset.type === 'team' ? 10 : undefined
       const ev = reactive({
         ...createEvent({
           type: preset.type,
@@ -279,16 +279,17 @@ function buildEvents() {
         })),
       })
 
-      // 團體賽：自動填入示範隊伍名稱與選手名單
+      // 團體賽：自動填入 10 隊，隊伍一～隊伍十，每隊選手自動產生
       if (preset.type === 'team') {
-        const demoCount = 4
+        const demoCount = 10
         const teamNames = []
         const usedNames = new Set()
+        const cnNum = ['一','二','三','四','五','六','七','八','九','十']
         for (let t = 0; t < demoCount; t++) {
-          const tName = TEAM_NAMES[(teamNameIdx++) % TEAM_NAMES.length]
+          const tName = `隊伍${cnNum[t] || (t + 1)}`
           teamNames.push(tName)
           const players = []
-          for (let j = 0; j < (defaultTeamSize || 6); j++) {
+          for (let j = 0; j < (defaultTeamSize || 10); j++) {
             let name
             do { name = randomName() } while (usedNames.has(name))
             usedNames.add(name)
