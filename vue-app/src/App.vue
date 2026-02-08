@@ -1,25 +1,22 @@
 <template>
   <div class="app-nav">
     <template v-if="isAdmin">
-      <router-link to="/admin">主站管理</router-link>
-      <router-link to="/admin/knockout16">16強管理</router-link>
+      <router-link to="/admin">賽事列表</router-link>
+      <router-link to="/admin/create">建立賽事</router-link>
       <router-link to="/" class="switch-link">← 觀看模式</router-link>
     </template>
     <template v-else>
-      <router-link to="/">主站</router-link>
-      <router-link to="/knockout16">16強</router-link>
+      <router-link to="/">賽事列表</router-link>
       <router-link to="/admin" class="switch-link">管理模式 →</router-link>
     </template>
   </div>
   <router-view />
-  <SyncStatus />
   <ToastNotification />
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import SyncStatus from './components/SyncStatus.vue'
 import ToastNotification from './components/ToastNotification.vue'
 
 const route = useRoute()
