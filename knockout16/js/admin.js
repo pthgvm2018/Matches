@@ -153,22 +153,16 @@
     document.getElementById('btnRandomSeed').addEventListener('click', function () {
       if (data.teams.length < 2) { showToast('至少需要 2 組'); return; }
       var shuffled = data.teams.slice().sort(function () { return Math.random() - 0.5; });
-      // 確保 rounds 結構存在
-      if (!data.rounds || data.rounds.length < 4) data.rounds = createEmptyRounds();
-      // 清除所有比賽
-      data.rounds.forEach(function (round) {
-        round.matches.forEach(function (m) {
-          m.team1Id = null; m.team2Id = null; m.score1 = 0; m.score2 = 0; m.games = []; m.completed = false;
-        });
-      });
-      data.thirdPlace = null;
-      // 填入十六強
+      // 只更新 UI 下拉選單，不修改 data、不儲存
+      var selects = document.querySelectorAll('[data-seed-pos]');
+      selects.forEach(function (sel) { sel.value = ''; });
       for (var i = 0; i < Math.min(shuffled.length, 16); i++) {
         var mi = Math.floor(i / 2);
-        if (i % 2 === 0) data.rounds[0].matches[mi].team1Id = shuffled[i].id;
-        else data.rounds[0].matches[mi].team2Id = shuffled[i].id;
+        var slot = i % 2;
+        var sel = document.querySelector('[data-seed-pos="' + mi + '_' + slot + '"]');
+        if (sel) sel.value = String(shuffled[i].id);
       }
-      persist(); renderSeeding(); showToast('已隨機抽籤');
+      showToast('已隨機排列，請按「儲存對戰表」確認');
     });
 
     document.getElementById('btnSaveBracket').addEventListener('click', function () {
@@ -176,16 +170,60 @@
       var selects = document.querySelectorAll('[data-seed-pos]');
       var used = {};
       var valid = true;
+      var newSeeding = [];
       selects.forEach(function (sel) {
         var pos = sel.dataset.seedPos.split('_');
         var mi = parseInt(pos[0]), slot = parseInt(pos[1]);
         var val = sel.value ? parseInt(sel.value) : null;
         if (val && used[val]) { valid = false; }
         if (val) used[val] = true;
-        if (slot === 0) data.rounds[0].matches[mi].team1Id = val;
-        else data.rounds[0].matches[mi].team2Id = val;
+        newSeeding.push({ mi: mi, slot: slot, val: val });
       });
       if (!valid) { showToast('同一隊不能出現兩次'); return; }
+
+      // 檢查是否有已完成的比賽
+      var hasResults = data.rounds && data.rounds.some(function (round) {
+        return round.matches.some(function (m) { return m.completed; });
+      });
+      if (data.thirdPlace && data.thirdPlace.completed) hasResults = true;
+
+      // 檢查十六強配對是否有變動
+      var changed = false;
+      if (data.rounds && data.rounds.length >= 1) {
+        newSeeding.forEach(function (s) {
+          var m = data.rounds[0].matches[s.mi];
+          if (!m) { changed = true; return; }
+          var old = s.slot === 0 ? m.team1Id : m.team2Id;
+          if (old !== s.val) changed = true;
+        });
+      } else {
+        changed = true;
+      }
+
+      if (hasResults && changed) {
+        if (!confirm('變更對戰排序將清除所有已完成的比賽成績，確定？')) return;
+      }
+
+      // 確保 rounds 結構存在
+      if (!data.rounds || data.rounds.length < 4) data.rounds = createEmptyRounds();
+
+      // 如果配對有變動，清除後續輪次
+      if (changed) {
+        data.rounds.forEach(function (round, ri) {
+          round.matches.forEach(function (m) {
+            if (ri > 0) { m.team1Id = null; m.team2Id = null; }
+            m.score1 = 0; m.score2 = 0; m.games = []; m.completed = false;
+          });
+        });
+        data.thirdPlace = null;
+      }
+
+      // 寫入十六強配對
+      newSeeding.forEach(function (s) {
+        if (s.slot === 0) data.rounds[0].matches[s.mi].team1Id = s.val;
+        else data.rounds[0].matches[s.mi].team2Id = s.val;
+      });
+
       persist(); showToast('對戰表已儲存');
     });
   }
