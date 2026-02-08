@@ -67,6 +67,11 @@
                 <option v-for="t in teamFmtOpts" :key="t.value" :value="t.value">{{ t.label }}</option>
               </select>
             </div>
+            <div class="form-group" v-if="ev.type === 'team'">
+              <label>每隊選手人數</label>
+              <input class="form-control" type="number" min="1" max="30"
+                     v-model.number="ev.teamSize" @change="onTeamSizeChange(ev)">
+            </div>
           </div>
           <!-- 自訂場次編輯 -->
           <template v-if="ev.type === 'team' && ev.teamMatchFormat === 'custom'">
@@ -102,6 +107,7 @@
             <span v-if="ev.type === 'team'" class="badge badge-yellow">
               {{ ev.teamMatchFormat === 'custom' ? (ev.rubbers?.length || 0) + '點' + (ev.pointsToWin || 3) + '勝' : getTeamFormatDesc(ev.teamMatchFormat) }}
             </span>
+            <span v-if="ev.type === 'team'" class="badge">每隊 {{ ev.teamSize || 10 }} 人</span>
           </div>
         </div>
 
@@ -216,6 +222,27 @@ function onTeamFormatChange(ev) {
   // 清除舊的 rubberResults 讓 attachRubbersToEvent 重新產生
   clearRubberResults(ev)
   attachRubbersToEvent(ev)
+  saveData()
+}
+
+function onTeamSizeChange(ev) {
+  const size = ev.teamSize || 10
+  // 調整所有參賽者的 players 陣列長度
+  const resizePlayers = (p) => {
+    if (!p) return
+    if (!p.players) p.players = []
+    while (p.players.length < size) p.players.push('')
+    while (p.players.length > size) p.players.pop()
+  }
+  for (const g of (ev.groups || [])) {
+    for (const p of (g.participants || [])) resizePlayers(p)
+    for (const m of (g.matches || [])) { resizePlayers(m.p1); resizePlayers(m.p2) }
+  }
+  for (const p of (ev.participants || [])) resizePlayers(p)
+  for (const round of (ev.bracket?.rounds || [])) {
+    for (const m of (round.matches || [])) { resizePlayers(m.p1); resizePlayers(m.p2) }
+  }
+  for (const m of (ev.roundRobinMatches || [])) { resizePlayers(m.p1); resizePlayers(m.p2) }
   saveData()
 }
 
