@@ -16,6 +16,7 @@ export function useTournamentList() {
     try {
       const snap = await getDocs(collection(db, COLLECTION))
       tournaments.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .filter(t => t.name)  // 排除舊版格式文件（沒有 name 屬性）
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
     } catch (e) {
       console.error('[useTournamentList] load failed:', e)
@@ -27,6 +28,7 @@ export function useTournamentList() {
   function listen() {
     unsubscribe = onSnapshot(collection(db, COLLECTION), (snap) => {
       tournaments.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .filter(t => t.name)  // 排除舊版格式文件（沒有 name 屬性）
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
       loading.value = false
     }, (err) => {
