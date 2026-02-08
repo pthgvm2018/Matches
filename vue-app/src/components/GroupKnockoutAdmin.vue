@@ -3,9 +3,18 @@
     <div class="section-title"><span class="icon">G</span>{{ event.label }} - 分組循環＋淘汰管理</div>
 
     <div class="sub-nav">
+      <button v-if="isTeam" :class="{ active: tab === 'teams' }" @click="tab = 'teams'">隊伍管理</button>
       <button :class="{ active: tab === 'groups' }" @click="tab = 'groups'">小組賽</button>
       <button :class="{ active: tab === 'knockout' }" @click="tab = 'knockout'">淘汰賽</button>
       <button :class="{ active: tab === 'promote' }" @click="tab = 'promote'">晉級操作</button>
+    </div>
+
+    <!-- 隊伍管理 -->
+    <div v-if="tab === 'teams'" class="card">
+      <div class="card-title">隊伍管理 <span class="badge badge-accent">{{ allParticipants.length }} 隊</span></div>
+      <TeamRosterEditor v-for="(p, i) in allParticipants" :key="p.id"
+        :participant="p" :index="i" :teamSize="event.teamSize || 10"
+        @update="$emit('save')" />
     </div>
 
     <!-- 小組賽管理 -->
@@ -63,6 +72,7 @@
           <h4 style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:10px;">比賽詳情</h4>
           <TeamMatchEditor v-for="m in group.matches" :key="m.id" :match="m"
             :bestOf="event.matchBestOf" :pointsToWin="event.pointsToWin || 3"
+            :participants="allParticipants"
             @update="(d) => onTeamMatchUpdate(m, d)" />
         </div>
 
@@ -109,12 +119,28 @@ import { calculateRoundRobinStandings, calculateTeamStandings, generateBracket }
 import ScoreEditor from './ScoreEditor.vue'
 import EliminationAdmin from './EliminationAdmin.vue'
 import TeamMatchEditor from './TeamMatchEditor.vue'
+import TeamRosterEditor from './TeamRosterEditor.vue'
 
 const props = defineProps({ event: Object })
 const emit = defineEmits(['save'])
 
 const tab = ref('groups')
 const isTeam = computed(() => props.event.type === 'team')
+
+// 所有參賽隊伍（從各組收集）
+const allParticipants = computed(() => {
+  const seen = new Set()
+  const result = []
+  for (const g of (props.event.groups || [])) {
+    for (const p of (g.participants || [])) {
+      if (!seen.has(p.id)) {
+        seen.add(p.id)
+        result.push(p)
+      }
+    }
+  }
+  return result
+})
 
 function teamGroupStandings(group) {
   return calculateTeamStandings(group.participants, group.matches)

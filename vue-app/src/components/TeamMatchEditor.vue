@@ -23,15 +23,69 @@
         </span>
       </div>
 
-      <!-- 選手名稱 -->
-      <div class="rubber-edit-row">
+      <!-- 選手選擇：有球員名單時用下拉選單 -->
+      <div v-if="hasPlayerRosters" class="rubber-edit-row">
+        <template v-if="rubber.type === 'doubles' || rubber.type === 'mixed_doubles'">
+          <select class="player-select" v-model="rubber.p1Indices[0]"
+                  :disabled="isRubberDisabled(ri)" @change="syncPlayerNames(ri)">
+            <option :value="-1">--</option>
+            <option v-for="(p, pi) in team1Players" :key="pi" :value="pi">
+              {{ p || '選手' + (pi + 1) }}
+            </option>
+          </select>
+          <span class="sep">/</span>
+          <select class="player-select" v-model="rubber.p1Indices[1]"
+                  :disabled="isRubberDisabled(ri)" @change="syncPlayerNames(ri)">
+            <option :value="-1">--</option>
+            <option v-for="(p, pi) in team1Players" :key="pi" :value="pi">
+              {{ p || '選手' + (pi + 1) }}
+            </option>
+          </select>
+          <span class="vs-small">VS</span>
+          <select class="player-select" v-model="rubber.p2Indices[0]"
+                  :disabled="isRubberDisabled(ri)" @change="syncPlayerNames(ri)">
+            <option :value="-1">--</option>
+            <option v-for="(p, pi) in team2Players" :key="pi" :value="pi">
+              {{ p || '選手' + (pi + 1) }}
+            </option>
+          </select>
+          <span class="sep">/</span>
+          <select class="player-select" v-model="rubber.p2Indices[1]"
+                  :disabled="isRubberDisabled(ri)" @change="syncPlayerNames(ri)">
+            <option :value="-1">--</option>
+            <option v-for="(p, pi) in team2Players" :key="pi" :value="pi">
+              {{ p || '選手' + (pi + 1) }}
+            </option>
+          </select>
+        </template>
+        <template v-else>
+          <select class="player-select" v-model="rubber.p1Indices[0]"
+                  :disabled="isRubberDisabled(ri)" @change="syncPlayerNames(ri)">
+            <option :value="-1">--</option>
+            <option v-for="(p, pi) in team1Players" :key="pi" :value="pi">
+              {{ p || '選手' + (pi + 1) }}
+            </option>
+          </select>
+          <span class="vs-small">VS</span>
+          <select class="player-select" v-model="rubber.p2Indices[0]"
+                  :disabled="isRubberDisabled(ri)" @change="syncPlayerNames(ri)">
+            <option :value="-1">--</option>
+            <option v-for="(p, pi) in team2Players" :key="pi" :value="pi">
+              {{ p || '選手' + (pi + 1) }}
+            </option>
+          </select>
+        </template>
+      </div>
+
+      <!-- 沒有球員名單時用文字輸入 -->
+      <div v-else class="rubber-edit-row">
         <input class="name-input" v-model="rubber.p1Name"
                :placeholder="match.p1?.name + ' 選手'"
-               :disabled="isRubberDisabled(ri)" @input="emitUpdate">
+               :disabled="isRubberDisabled(ri)">
         <span class="vs-small">VS</span>
         <input class="name-input" v-model="rubber.p2Name"
                :placeholder="match.p2?.name + ' 選手'"
-               :disabled="isRubberDisabled(ri)" @input="emitUpdate">
+               :disabled="isRubberDisabled(ri)">
       </div>
 
       <!-- 各局比分（固定 bestOf 組，橫排） -->
@@ -64,11 +118,20 @@ const props = defineProps({
   match: Object,
   bestOf: { type: Number, default: 5 },
   pointsToWin: { type: Number, default: 3 },
+  participants: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['update'])
 
-// 初始化 rubbers 資料
 const rubbers = ref(initRubbers())
+
+// 找到 p1, p2 的球員名單
+const team1Data = computed(() => props.participants.find(p => p.id === props.match.p1?.id))
+const team2Data = computed(() => props.participants.find(p => p.id === props.match.p2?.id))
+const team1Players = computed(() => team1Data.value?.players || [])
+const team2Players = computed(() => team2Data.value?.players || [])
+const hasPlayerRosters = computed(() =>
+  team1Players.value.length > 0 && team1Players.value.some(p => p)
+)
 
 function initRubbers() {
   return (props.match.rubberResults || []).map(r => ({
@@ -77,8 +140,27 @@ function initRubbers() {
     type: r.type,
     p1Name: r.p1Name || '',
     p2Name: r.p2Name || '',
+    p1Indices: parseIndices(r.p1Name, r.type, 'p1'),
+    p2Indices: parseIndices(r.p2Name, r.type, 'p2'),
     scores: initScores(r.scores),
   }))
+}
+
+// 嘗試從名字反推球員 index
+function parseIndices(name, type, side) {
+  const isDoubles = type === 'doubles' || type === 'mixed_doubles'
+  const players = side === 'p1' ? team1Players.value : team2Players.value
+  if (!name || !players.length) return isDoubles ? [-1, -1] : [-1]
+
+  if (isDoubles) {
+    const parts = name.split(/\s*\/\s*/)
+    return [
+      players.indexOf(parts[0] || '') >= 0 ? players.indexOf(parts[0]) : -1,
+      players.indexOf(parts[1] || '') >= 0 ? players.indexOf(parts[1]) : -1,
+    ]
+  }
+  const idx = players.indexOf(name)
+  return [idx >= 0 ? idx : -1]
 }
 
 function initScores(scores) {
@@ -90,23 +172,40 @@ function initScores(scores) {
   return arr
 }
 
-// 取得某點某局的分數
+// 從下拉選單同步到 p1Name/p2Name
+function syncPlayerNames(ri) {
+  const rubber = rubbers.value[ri]
+  const isDoubles = rubber.type === 'doubles' || rubber.type === 'mixed_doubles'
+  const t1p = team1Players.value
+  const t2p = team2Players.value
+
+  if (isDoubles) {
+    const a1 = rubber.p1Indices[0] >= 0 ? (t1p[rubber.p1Indices[0]] || '') : ''
+    const a2 = rubber.p1Indices[1] >= 0 ? (t1p[rubber.p1Indices[1]] || '') : ''
+    rubber.p1Name = [a1, a2].filter(Boolean).join(' / ')
+
+    const b1 = rubber.p2Indices[0] >= 0 ? (t2p[rubber.p2Indices[0]] || '') : ''
+    const b2 = rubber.p2Indices[1] >= 0 ? (t2p[rubber.p2Indices[1]] || '') : ''
+    rubber.p2Name = [b1, b2].filter(Boolean).join(' / ')
+  } else {
+    rubber.p1Name = rubber.p1Indices[0] >= 0 ? (t1p[rubber.p1Indices[0]] || '') : ''
+    rubber.p2Name = rubber.p2Indices[0] >= 0 ? (t2p[rubber.p2Indices[0]] || '') : ''
+  }
+}
+
 function getGameScore(ri, gi, side) {
   const g = rubbers.value[ri]?.scores?.[gi]
   if (!g) return ''
   return g[side] || ''
 }
 
-// 設定某點某局的分數
 function setGameScore(ri, gi, side, event) {
   const rubber = rubbers.value[ri]
   if (!rubber.scores) rubber.scores = []
   while (rubber.scores.length <= gi) rubber.scores.push({ a: 0, b: 0 })
   rubber.scores[gi][side] = parseInt(event.target.value) || 0
-  emitUpdate()
 }
 
-// 計算某點勝者：誰先拿到 ceil(bestOf/2) 局
 function rubberWinner(ri) {
   const rubber = rubbers.value[ri]
   const toWin = Math.ceil(props.bestOf / 2)
@@ -123,11 +222,9 @@ function rubberWinner(ri) {
 }
 
 function rubberGameScore(ri) {
-  const rubber = rubbers.value[ri]
-  return gameScore(rubber.scores)
+  return gameScore(rubbers.value[ri].scores)
 }
 
-// 這點是否因為比賽已結束而被停用
 function isRubberDisabled(ri) {
   let s1 = 0, s2 = 0
   for (let i = 0; i < ri; i++) {
@@ -138,7 +235,6 @@ function isRubberDisabled(ri) {
   return s1 >= props.pointsToWin || s2 >= props.pointsToWin
 }
 
-// 計算 teamScore
 const teamScore = computed(() => {
   let a = 0, b = 0
   for (let i = 0; i < rubbers.value.length; i++) {
@@ -155,10 +251,6 @@ const matchWinner = computed(() => {
   if (teamScore.value.b >= props.pointsToWin) return 2
   return 0
 })
-
-function emitUpdate() {
-  // 即時通知 parent 比分變化
-}
 
 function save() {
   const rubberResults = rubbers.value.map((r, ri) => {
@@ -187,7 +279,6 @@ function save() {
   })
 }
 
-// 外部資料更新同步
 watch(() => props.match.rubberResults, (newVal) => {
   if (newVal) {
     rubbers.value = initRubbers()
@@ -228,6 +319,14 @@ watch(() => props.match.rubberResults, (newVal) => {
 .rubber-edit-row {
   display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;
 }
+.player-select {
+  flex: 1; min-width: 70px; padding: 4px 6px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-card); color: var(--text-primary);
+  font-size: 0.82rem; font-family: inherit;
+}
+.player-select:focus { border-color: var(--accent); outline: none; }
+.sep { color: var(--text-muted); font-size: 0.8rem; }
 .name-input {
   flex: 1; min-width: 80px; padding: 4px 8px;
   border: 1px solid var(--border); border-radius: var(--radius-sm);

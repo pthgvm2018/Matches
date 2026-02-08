@@ -284,7 +284,13 @@ function buildEvents() {
 
 function parseParticipants(ev) {
   const lines = ev.participantText.split('\n').map(l => l.trim()).filter(Boolean)
-  ev.participants = lines.map((name, i) => ({ id: uid(), name, seed: i + 1 }))
+  ev.participants = lines.map((name, i) => {
+    const p = { id: uid(), name, seed: i + 1 }
+    if (ev.type === 'team') {
+      p.players = Array.from({ length: ev.teamSize || 10 }, () => '')
+    }
+    return p
+  })
 
   // 自動更新分組建議
   if (ev.format === 'group_knockout' && ev.participants.length >= 2) {

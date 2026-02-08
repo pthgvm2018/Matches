@@ -133,13 +133,37 @@ async function confirmDelete() {
   router.push('/admin')
 }
 
+// 確保團體賽參賽者都有 players 陣列（舊賽事遷移）
+function ensureTeamPlayers(ev) {
+  const teamSize = ev.teamSize || 10
+  const ensurePlayer = (p) => {
+    if (p && !p.players) {
+      p.players = Array.from({ length: teamSize }, () => '')
+    }
+  }
+  // 從各組收集
+  for (const g of (ev.groups || [])) {
+    for (const p of (g.participants || [])) ensurePlayer(p)
+    for (const m of (g.matches || [])) { ensurePlayer(m.p1); ensurePlayer(m.p2) }
+  }
+  // participants 陣列
+  for (const p of (ev.participants || [])) ensurePlayer(p)
+  // bracket rounds
+  for (const round of (ev.bracket?.rounds || [])) {
+    for (const m of (round.matches || [])) { ensurePlayer(m.p1); ensurePlayer(m.p2) }
+  }
+  // roundRobinMatches
+  for (const m of (ev.roundRobinMatches || [])) { ensurePlayer(m.p1); ensurePlayer(m.p2) }
+}
+
 onMounted(async () => {
   await load()
   if (data.value && data.value.events.length > 0) {
-    // 團體賽：確保比賽都有 rubberResults 模板
+    // 團體賽：確保比賽都有 rubberResults 模板，參賽者都有 players 欄位
     for (const ev of data.value.events) {
       if (ev.type === 'team') {
         attachRubbersToEvent(ev)
+        ensureTeamPlayers(ev)
       }
     }
     activeTab.value = data.value.events[0].id
