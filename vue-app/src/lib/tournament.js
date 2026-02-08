@@ -320,7 +320,7 @@ function attachRubberResults(matches, rubbers) {
   }
 }
 
-function attachRubbersToEvent(event) {
+export function attachRubbersToEvent(event) {
   const rubbers = event.rubbers || []
   if (!rubbers.length) return
   if (event.roundRobinMatches) {

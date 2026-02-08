@@ -90,7 +90,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTournament } from '../composables/useTournaments.js'
-import { BEST_OF_OPTIONS, generateRulesText } from '../lib/tournament.js'
+import { BEST_OF_OPTIONS, generateRulesText, attachRubbersToEvent } from '../lib/tournament.js'
 import RoundRobinAdmin from '../components/RoundRobinAdmin.vue'
 import EliminationAdmin from '../components/EliminationAdmin.vue'
 import GroupKnockoutAdmin from '../components/GroupKnockoutAdmin.vue'
@@ -136,6 +136,12 @@ async function confirmDelete() {
 onMounted(async () => {
   await load()
   if (data.value && data.value.events.length > 0) {
+    // 團體賽：確保比賽都有 rubberResults 模板
+    for (const ev of data.value.events) {
+      if (ev.type === 'team') {
+        attachRubbersToEvent(ev)
+      }
+    }
     activeTab.value = data.value.events[0].id
   }
   listen()
