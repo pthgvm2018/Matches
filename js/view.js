@@ -7,6 +7,11 @@
     if (!data) data = loadData();
     renderAll();
     setupNav();
+    // Firestore 即時同步：其他裝置更新時自動刷新畫面
+    window.addEventListener('firestore-update', function () {
+      data = loadData();
+      renderAll();
+    });
   }
 
   function setupNav() {
