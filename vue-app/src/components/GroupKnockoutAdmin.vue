@@ -14,7 +14,7 @@
       <div class="card-title">隊伍管理 <span class="badge badge-accent">{{ allParticipants.length }} 隊</span></div>
       <TeamRosterEditor v-for="(p, i) in allParticipants" :key="p.id"
         :participant="p" :index="i" :teamSize="event.teamSize || 10"
-        @update="$emit('save')" />
+        @update="syncRostersToMatches(); $emit('save')" />
     </div>
 
     <!-- 小組賽管理 -->
@@ -193,6 +193,25 @@ function promote() {
   props.event.bracket = generateBracket(promoted)
   emit('save')
   tab.value = 'knockout'
+}
+
+// 隊伍名單編輯後，同步到所有 match.p1/p2 物件（因為 Firestore 反序列化後它們是獨立副本）
+function syncRostersToMatches() {
+  const map = new Map(allParticipants.value.map(p => [p.id, p]))
+  function sync(m) {
+    if (!m) return
+    for (const side of ['p1', 'p2']) {
+      if (m[side] && map.has(m[side].id)) {
+        m[side].players = map.get(m[side].id).players
+      }
+    }
+  }
+  for (const g of (props.event.groups || [])) {
+    for (const m of (g.matches || [])) sync(m)
+  }
+  for (const round of (props.event.bracket?.rounds || [])) {
+    for (const m of (round.matches || [])) sync(m)
+  }
 }
 
 const knockoutEvent = computed(() => ({
