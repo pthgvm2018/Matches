@@ -397,10 +397,85 @@ export function generateEventMatches(event, config = {}) {
 
 const SURNAMES = ['王','李','張','劉','陳','楊','趙','黃','周','吳','徐','孫','林','馬','高','胡','鄭','郭','何','羅']
 const GIVEN_NAMES = ['大明','志強','建華','文傑','俊宏','家豪','振偉','彥廷','冠宇','柏翰','宗穎','建志','家銘','國強','明哲','承恩','浩然','宇翔','雅婷','怡君','佳蓉','淑芬','雅琪','惠如','詩涵','欣怡','靜宜','心怡','婉婷','雅文']
+const TEAM_NAMES = ['龍騰','鳳翔','虎嘯','豹躍','鷹揚','獅吼','熊霸','鶴舞','麒麟','玄武','朱雀','青龍','白虎','天狼','飛鷹','雷霆','烈焰','蒼穹','銀河','北斗']
 
 function randomName() {
   return SURNAMES[Math.floor(Math.random() * SURNAMES.length)] +
          GIVEN_NAMES[Math.floor(Math.random() * GIVEN_NAMES.length)]
+}
+
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+// 為團體賽填入隊伍名稱與選手名單
+function populateTeamRosters(event) {
+  if (event.type !== 'team') return
+
+  const teamSize = event.teamSize || 10
+  const usedNames = new Set()
+  const availableTeamNames = [...TEAM_NAMES].sort(() => Math.random() - 0.5)
+
+  // 收集所有參賽者（可能在 participants、groups、bracket 中）
+  const allParticipants = new Map()
+  function collect(p) { if (p && !allParticipants.has(p.id)) allParticipants.set(p.id, p) }
+
+  for (const p of (event.participants || [])) collect(p)
+  for (const g of (event.groups || [])) {
+    for (const p of (g.participants || [])) collect(p)
+    for (const m of (g.matches || [])) { collect(m.p1); collect(m.p2) }
+  }
+  for (const round of (event.bracket?.rounds || [])) {
+    for (const m of (round.matches || [])) { collect(m.p1); collect(m.p2) }
+  }
+  for (const m of (event.roundRobinMatches || [])) { collect(m.p1); collect(m.p2) }
+
+  let teamIdx = 0
+  for (const [id, p] of allParticipants) {
+    // 填入隊名（如果是預設名稱）
+    if (!p.name || /^隊伍/.test(p.name)) {
+      p.name = teamIdx < availableTeamNames.length ? availableTeamNames[teamIdx] : `隊伍${teamIdx + 1}`
+    }
+    teamIdx++
+
+    // 填入選手名單
+    if (!p.players) p.players = []
+    while (p.players.length < teamSize) p.players.push('')
+    for (let i = 0; i < p.players.length; i++) {
+      if (!p.players[i]) {
+        let name
+        do { name = randomName() } while (usedNames.has(name))
+        usedNames.add(name)
+        p.players[i] = name
+      }
+    }
+  }
+
+  // 同步：match.p1/p2 可能是 shallow copy，需要同步 name 和 players
+  function syncMatch(m) {
+    if (!m) return
+    for (const side of ['p1', 'p2']) {
+      if (m[side] && allParticipants.has(m[side].id)) {
+        const src = allParticipants.get(m[side].id)
+        m[side].name = src.name
+        m[side].players = src.players
+      }
+    }
+  }
+  for (const g of (event.groups || [])) {
+    for (const gp of (g.participants || [])) {
+      if (allParticipants.has(gp.id)) {
+        const src = allParticipants.get(gp.id)
+        gp.name = src.name
+        gp.players = src.players
+      }
+    }
+    for (const m of (g.matches || [])) syncMatch(m)
+  }
+  for (const round of (event.bracket?.rounds || [])) {
+    for (const m of (round.matches || [])) syncMatch(m)
+  }
+  for (const m of (event.roundRobinMatches || [])) syncMatch(m)
 }
 
 // 產生一局擬真桌球比分 (11分制, deuce 需贏兩分)
@@ -450,6 +525,21 @@ function simulateTeamMatch(match, event) {
   const bestOf = event.matchBestOf || 5
   let s1 = 0, s2 = 0
 
+  // 從隊伍名單中取選手（有填的優先）
+  const t1p = (match.p1.players || []).filter(p => p)
+  const t2p = (match.p2.players || []).filter(p => p)
+  const used1 = new Set(), used2 = new Set()
+
+  function pickPlayer(team, usedSet) {
+    const available = team.filter((_, i) => !usedSet.has(i))
+    if (available.length > 0) {
+      const idx = team.indexOf(available[Math.floor(Math.random() * available.length)])
+      usedSet.add(idx)
+      return team[idx]
+    }
+    return randomName()
+  }
+
   for (const rubber of rubbers) {
     // 已分出勝負的點不再比賽
     if (s1 >= ptw || s2 >= ptw) {
@@ -460,13 +550,14 @@ function simulateTeamMatch(match, event) {
       continue
     }
 
-    // 產生選手名稱
-    if (rubber.type === 'doubles' || rubber.type === 'mixed_doubles') {
-      rubber.p1Name = randomName() + ' / ' + randomName()
-      rubber.p2Name = randomName() + ' / ' + randomName()
+    // 從名單中選出選手
+    const isDoubles = rubber.type === 'doubles' || rubber.type === 'mixed_doubles'
+    if (isDoubles) {
+      rubber.p1Name = pickPlayer(t1p, used1) + ' / ' + pickPlayer(t1p, used1)
+      rubber.p2Name = pickPlayer(t2p, used2) + ' / ' + pickPlayer(t2p, used2)
     } else {
-      rubber.p1Name = randomName()
-      rubber.p2Name = randomName()
+      rubber.p1Name = pickPlayer(t1p, used1)
+      rubber.p2Name = pickPlayer(t2p, used2)
     }
 
     // 模擬各局比分
@@ -533,6 +624,9 @@ function simulateEliminationRounds(rounds, bestOf, isTeam, event) {
 export function simulateEvent(event) {
   const bestOf = event.matchBestOf || 5
   const isTeam = event.type === 'team'
+
+  // 團體賽：先填入隊名和選手名單
+  if (isTeam) populateTeamRosters(event)
 
   if (event.format === 'round_robin') {
     simulateRoundRobinMatches(event.roundRobinMatches || [], bestOf, isTeam, event)
