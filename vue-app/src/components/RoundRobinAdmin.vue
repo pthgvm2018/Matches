@@ -5,12 +5,12 @@
     <!-- 積分榜 -->
     <RoundRobinView :event="event" />
 
-    <!-- 團體賽比賽結果 -->
+    <!-- 團體賽比賽編輯 -->
     <div v-if="isTeam" class="card" style="margin-top:16px;">
-      <div class="card-title">比賽結果</div>
-      <div class="match-list">
-        <TeamMatchDetail v-for="m in event.roundRobinMatches" :key="m.id" :match="m" />
-      </div>
+      <div class="card-title">編輯比分</div>
+      <TeamMatchEditor v-for="m in event.roundRobinMatches" :key="m.id" :match="m"
+        :bestOf="event.matchBestOf" :pointsToWin="event.pointsToWin || 3"
+        @update="(d) => onTeamMatchUpdate(m, d)" />
       <button class="btn btn-success" style="margin-top:12px;" @click="$emit('save')">
         儲存變更
       </button>
@@ -34,7 +34,7 @@
 import { computed } from 'vue'
 import RoundRobinView from './RoundRobinView.vue'
 import ScoreEditor from './ScoreEditor.vue'
-import TeamMatchDetail from './TeamMatchDetail.vue'
+import TeamMatchEditor from './TeamMatchEditor.vue'
 import { determineWinner } from '../lib/tournament.js'
 
 const props = defineProps({ event: Object })
@@ -46,5 +46,14 @@ function onScoreUpdate(match, { scores, winner }) {
   if (winner === 1) match.winner = match.p1
   else if (winner === 2) match.winner = match.p2
   else match.winner = null
+}
+
+function onTeamMatchUpdate(match, { rubberResults, teamScore, winner }) {
+  match.rubberResults = rubberResults
+  match.teamScore = teamScore
+  if (winner === 1) match.winner = match.p1
+  else if (winner === 2) match.winner = match.p2
+  else match.winner = null
+  emit('save')
 }
 </script>

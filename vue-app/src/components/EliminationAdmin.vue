@@ -11,7 +11,9 @@
       <div class="card-title">{{ roundName(ri) }}</div>
       <div v-for="(match, mi) in round.matches" :key="match.id">
         <template v-if="!match.isBye && match.p1 && match.p2">
-          <TeamMatchDetail v-if="isTeam" :match="match" />
+          <TeamMatchEditor v-if="isTeam" :match="match"
+            :bestOf="event.matchBestOf" :pointsToWin="event.pointsToWin || 3"
+            @update="(d) => onTeamScoreUpdate(ri, mi, match, d)" />
           <ScoreEditor v-else :match="match" :bestOf="event.matchBestOf"
                        @update="(d) => onScoreUpdate(ri, mi, match, d)" />
         </template>
@@ -36,7 +38,7 @@
 import { computed } from 'vue'
 import EliminationView from './EliminationView.vue'
 import ScoreEditor from './ScoreEditor.vue'
-import TeamMatchDetail from './TeamMatchDetail.vue'
+import TeamMatchEditor from './TeamMatchEditor.vue'
 import { setBracketWinner } from '../lib/tournament.js'
 
 const props = defineProps({ event: Object })
@@ -61,5 +63,18 @@ function onScoreUpdate(ri, mi, match, { scores, winner }) {
   } else {
     match.winner = null
   }
+}
+
+function onTeamScoreUpdate(ri, mi, match, { rubberResults, teamScore, winner }) {
+  match.rubberResults = rubberResults
+  match.teamScore = teamScore
+  if (winner === 1) {
+    setBracketWinner(props.event.bracket.rounds, ri, mi, match.p1)
+  } else if (winner === 2) {
+    setBracketWinner(props.event.bracket.rounds, ri, mi, match.p2)
+  } else {
+    match.winner = null
+  }
+  emit('save')
 }
 </script>

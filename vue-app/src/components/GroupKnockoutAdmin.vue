@@ -58,12 +58,12 @@
           </table>
         </div>
 
-        <!-- 團體賽比賽列表 -->
+        <!-- 團體賽比賽編輯 -->
         <div v-if="isTeam" style="margin-bottom:12px;">
           <h4 style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:10px;">比賽詳情</h4>
-          <div class="match-list">
-            <TeamMatchDetail v-for="m in group.matches" :key="m.id" :match="m" />
-          </div>
+          <TeamMatchEditor v-for="m in group.matches" :key="m.id" :match="m"
+            :bestOf="event.matchBestOf" :pointsToWin="event.pointsToWin || 3"
+            @update="(d) => onTeamMatchUpdate(m, d)" />
         </div>
 
         <!-- 一般比分編輯 -->
@@ -108,7 +108,7 @@ import { ref, computed } from 'vue'
 import { calculateRoundRobinStandings, calculateTeamStandings, generateBracket } from '../lib/tournament.js'
 import ScoreEditor from './ScoreEditor.vue'
 import EliminationAdmin from './EliminationAdmin.vue'
-import TeamMatchDetail from './TeamMatchDetail.vue'
+import TeamMatchEditor from './TeamMatchEditor.vue'
 
 const props = defineProps({ event: Object })
 const emit = defineEmits(['save'])
@@ -141,6 +141,15 @@ function onGroupScoreUpdate(match, { scores, winner }) {
   if (winner === 1) match.winner = match.p1
   else if (winner === 2) match.winner = match.p2
   else match.winner = null
+}
+
+function onTeamMatchUpdate(match, { rubberResults, teamScore, winner }) {
+  match.rubberResults = rubberResults
+  match.teamScore = teamScore
+  if (winner === 1) match.winner = match.p1
+  else if (winner === 2) match.winner = match.p2
+  else match.winner = null
+  emit('save')
 }
 
 function promote() {
