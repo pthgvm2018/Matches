@@ -93,6 +93,10 @@
           <label>
             參賽{{ ev.type === 'team' ? '隊伍' : (ev.type === 'doubles' || ev.type === 'mixed_doubles' ? '組合' : '選手') }}
             <span class="badge badge-accent" style="margin-left:8px;">{{ ev.participants.length }}{{ ev.type === 'team' ? '隊' : '人' }}</span>
+            <button class="btn btn-outline btn-sm" style="margin-left:8px;padding:2px 10px;font-size:0.75rem;"
+                    @click="generateDemoParticipants(ev)">
+              模擬名單
+            </button>
           </label>
           <textarea class="form-control" v-model="ev.participantText"
                     :placeholder="ev.type === 'team' ? '每行一隊，例：\n潮州隊\n屏東隊\n高雄隊' :
@@ -403,6 +407,63 @@ watch(() => events.value.map(e => e.customRubberCount), () => {
     }
   }
 }, { deep: true })
+
+function generateDemoParticipants(ev) {
+  const usedNames = new Set()
+  const genName = () => {
+    let name
+    do { name = randomName() } while (usedNames.has(name))
+    usedNames.add(name)
+    return name
+  }
+
+  // 根據賽制決定人數
+  let count
+  if (ev.format === 'round_robin') {
+    count = 6
+  } else if (ev.format === 'group_knockout') {
+    count = 12
+  } else {
+    count = 8
+  }
+
+  const teamSize = ev.teamSize || 10
+  const lines = []
+  const participants = []
+
+  if (ev.type === 'team') {
+    const cnNum = ['一','二','三','四','五','六','七','八','九','十','十一','十二','十三','十四','十五','十六']
+    for (let i = 0; i < count; i++) {
+      const tName = TEAM_NAMES[i] || `隊伍${cnNum[i] || (i + 1)}`
+      lines.push(tName)
+      const players = []
+      for (let j = 0; j < teamSize; j++) players.push(genName())
+      participants.push({ id: uid(), name: tName, seed: i + 1, players })
+    }
+  } else if (ev.type === 'doubles' || ev.type === 'mixed_doubles') {
+    for (let i = 0; i < count; i++) {
+      const pair = `${genName()}/${genName()}`
+      lines.push(pair)
+      participants.push({ id: uid(), name: pair, seed: i + 1 })
+    }
+  } else {
+    for (let i = 0; i < count; i++) {
+      const name = genName()
+      lines.push(name)
+      participants.push({ id: uid(), name, seed: i + 1 })
+    }
+  }
+
+  ev.participantText = lines.join('\n')
+  ev.participants = participants
+
+  // 自動更新分組建議
+  if (ev.format === 'group_knockout' && participants.length >= 2) {
+    const s = suggestGroups(participants.length)
+    ev.numGroups = s.groups
+    ev.advancePerGroup = s.advance
+  }
+}
 
 function onTeamFormatChange(ev) {
   if (ev.teamMatchFormat !== 'custom') {
