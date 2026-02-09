@@ -86,6 +86,10 @@ function bestOfLabel(b) {
 
 onMounted(async () => {
   await load()
+  // 自動選擇第一個項目 tab，直接展示比賽內容
+  if (data.value && data.value.events?.length > 0) {
+    activeTab.value = data.value.events[0].id
+  }
   listen()
 })
 onUnmounted(stop)
