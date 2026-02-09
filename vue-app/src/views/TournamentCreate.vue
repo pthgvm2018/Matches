@@ -262,7 +262,7 @@ const eventPresets = [
   { key: 'ws', label: '女子單打', desc: '女子 1v1', type: 'singles', gender: 'female' },
   { key: 'md', label: '男子雙打', desc: '男子 2v2', type: 'doubles', gender: 'male' },
   { key: 'wd', label: '女子雙打', desc: '女子 2v2', type: 'doubles', gender: 'female' },
-  { key: 'xd', label: '混合雙打', desc: '男女各一 2v2', type: 'mixed_doubles', gender: 'mixed' },
+  { key: 'xd', label: '混合雙打', desc: '不限男女組合 2v2', type: 'mixed_doubles', gender: 'mixed' },
   { key: 'mt', label: '男子團體', desc: '男子隊伍對抗', type: 'team', gender: 'male' },
   { key: 'wt', label: '女子團體', desc: '女子隊伍對抗', type: 'team', gender: 'female' },
   { key: 'xt', label: '混合團體', desc: '男女混合隊伍', type: 'team', gender: 'mixed' },
