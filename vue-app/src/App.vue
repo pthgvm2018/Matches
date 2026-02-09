@@ -7,6 +7,7 @@
     </template>
     <template v-else>
       <router-link to="/">賽事列表</router-link>
+      <router-link to="/admin" class="switch-link">管理模式 →</router-link>
     </template>
   </div>
   <router-view />
